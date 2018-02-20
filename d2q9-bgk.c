@@ -136,6 +136,14 @@ int main(int argc, char* argv[])
   double usrtim;                /* floating point number to record elapsed user CPU time */
   double systim;                /* floating point number to record elapsed system CPU time */
 
+  //MPI related
+  int rank;               /* 'rank' of process among it's cohort */
+  int size;               /* size of cohort, i.e. num processes started */
+  int flag;               /* for checking whether MPI_Init() has been called */
+  int strlen;             /* length of a character array */
+  enum bool {FALSE,TRUE}; /* enumerated type: false = 0, true = 1 */
+  char hostname[MPI_MAX_PROCESSOR_NAME];  /* character array to hold hostname running process */
+
   /* parse the command line */
   if (argc != 3)
   {
@@ -147,12 +155,57 @@ int main(int argc, char* argv[])
     obstaclefile = argv[2];
   }
 
-  /* initialise our data structures and load values from file */
-  initialise(paramfile, obstaclefile, &params, &cells, &tmp_cells, &obstacles, &av_vels);
+  /* initialise our MPI environment */
+  MPI_Init( &argc, &argv );
+
+  /* check whether the initialisation was successful */
+  MPI_Initialized(&flag);
+  if ( flag != TRUE ) {
+    MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+  }
+
+  /* determine the hostname */
+  MPI_Get_processor_name(hostname,&strlen);
+
+  /*
+  ** determine the SIZE of the group of processes associated with
+  ** the 'communicator'.  MPI_COMM_WORLD is the default communicator
+  ** consisting of all the processes in the launched MPI 'job'
+  */
+  MPI_Comm_size( MPI_COMM_WORLD, &size );
+
+  /* determine the RANK of the current process [0:SIZE-1] */
+  MPI_Comm_rank( MPI_COMM_WORLD, &rank );
 
   /* iterate for maxIters timesteps */
   gettimeofday(&timstr, NULL);
   tic = timstr.tv_sec + (timstr.tv_usec / 1000000.0);
+
+  //MPI process subgrid
+  int process_cols = calc_ncols_from_rank(rank, size, params.nx);
+  t_param  process_params = params;  // copy values
+  process_params.nx = process_cols;
+
+  /* main grid */
+  *process_cells = (t_speed*)malloc(sizeof(t_speed) * (process_params->ny * process_params->nx));
+
+  if (*process_cells == NULL) die("cannot allocate memory for cells", __LINE__, __FILE__);
+
+  /* 'helper' grid, used as scratch space */
+  *process_tmp_cells = (t_speed*)malloc(sizeof(t_speed) * (process_params->ny * process_params->nx));
+
+  if (*process_tmp_cells == NULL) die("cannot allocate memory for tmp_cells", __LINE__, __FILE__);
+
+  /* the map of obstacles */
+  *process_obstacles = malloc(sizeof(int) * (process_params->ny * process_params->nx));
+
+  if (*process_obstacles == NULL) die("cannot allocate column memory for obstacles", __LINE__, __FILE__);
+
+  if(rank == 0) {
+    /* initialise our data structures and load values from file */
+    initialise(paramfile, obstaclefile, &params, &cells, &tmp_cells, &obstacles, &av_vels);
+  }
+  
 
   for (int tt = 0; tt < params.maxIters; tt++)
   {
@@ -182,7 +235,26 @@ int main(int argc, char* argv[])
   write_values(params, cells, obstacles, av_vels);
   finalise(&params, &cells, &tmp_cells, &obstacles, &av_vels);
 
+  free(process_cells);
+  free(process_tmp_cells);
+  free(process_obstacles);
+  /* finialise the MPI enviroment */
+  MPI_Finalize();
+
   return EXIT_SUCCESS;
+}
+
+int calc_ncols_from_rank(int rank, int size, int nx)
+{
+  int ncols;
+
+  ncols = nx / size;       /* integer division */
+  if ((nx % size) != 0) {  /* if there is a remainder */
+    if (rank == size - 1)
+      ncols += nx % size;  /* add remainder to last rank */
+  }
+
+  return ncols;
 }
 
 int timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles)
