@@ -187,25 +187,45 @@ int main(int argc, char* argv[])
   process_params.nx = process_cols;
 
   /* main grid */
-  *process_cells = (t_speed*)malloc(sizeof(t_speed) * (process_params->ny * process_params->nx));
+  *process_cells = (t_speed*)malloc(sizeof(t_speed) * (process_params.ny * process_params.nx));
 
   if (*process_cells == NULL) die("cannot allocate memory for cells", __LINE__, __FILE__);
 
   /* 'helper' grid, used as scratch space */
-  *process_tmp_cells = (t_speed*)malloc(sizeof(t_speed) * (process_params->ny * process_params->nx));
+  *process_tmp_cells = (t_speed*)malloc(sizeof(t_speed) * (process_params.ny * process_params.nx));
 
   if (*process_tmp_cells == NULL) die("cannot allocate memory for tmp_cells", __LINE__, __FILE__);
 
   /* the map of obstacles */
-  *process_obstacles = malloc(sizeof(int) * (process_params->ny * process_params->nx));
+  *process_obstacles = malloc(sizeof(int) * (process_params.ny * process_params.nx));
 
   if (*process_obstacles == NULL) die("cannot allocate column memory for obstacles", __LINE__, __FILE__);
+
+  t_speed* sendbuf = (t_speed*)malloc(sizeof(t_speed) * process_params.ny);
+  t_speed* recvbuf = (t_speed*)malloc(sizeof(t_speed) * process_params.ny);
 
   if(rank == 0) {
     /* initialise our data structures and load values from file */
     initialise(paramfile, obstaclefile, &params, &cells, &tmp_cells, &obstacles, &av_vels);
+    //fill in process grid for master process
+    for(int i = 0; i < process_params.ny; ++i) {
+      for(int j = 0; j < process_params.nx; ++j) {
+        process_cells[i*(process_params.nx+2) + j + 1] = cells[i*params.nx + j];
+        process_tmp_cells[i*(process_params.nx+2) + j + 1] = tmp_cells[i*params.nx + j];
+        process_obstacles[i*(process_params.nx+2) + j + 1] = obstacles[i*params.nx + j];
+      }
+    }
+
+    //fill other processes' grids
+    for(int i = 1; i < size; ++i) {
+      int i_process_cols = calc_ncols_from_rank(i, size, params.nx);
+      int cols_per_rank = params.nx / size;
+      for(int j = 0; j < i_process_cols; ++j) {
+        sendbuf[j] =
+      }
+    }
   }
-  
+
 
   for (int tt = 0; tt < params.maxIters; tt++)
   {
