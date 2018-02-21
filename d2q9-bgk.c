@@ -101,6 +101,7 @@ int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obs
 int write_values(const t_param params, t_speed* cells, int* obstacles, float* av_vels);
 int calc_ncols_from_rank(int rank, int size, int nx);
 void initialise_params_from_file(const char* paramfile, t_param* params);
+void test_run(const char* output_file, int nx, int ny, t_speed *cells, int *obstacles);
 
 /* finalise, including freeing up allocated memory */
 int finalise(const t_param* params, t_speed** cells_ptr, t_speed** tmp_cells_ptr,
@@ -222,6 +223,7 @@ int main(int argc, char* argv[])
   if(rank == 0) {
     /* initialise our data structures and load values from file */
     initialise(paramfile, obstaclefile, &params, &cells, &tmp_cells, &obstacles, &av_vels);
+    test_run("TEST_initial_vals.txt", params.nx, params.ny, cells, obstacles);
     //fill in process grid for master process
     for(int i = 0; i < process_params.ny; ++i) {
       for(int j = 1; j < process_params.nx-1; ++j) {
@@ -270,17 +272,17 @@ int main(int argc, char* argv[])
   printf("test2\n");
   if(rank == 0) {
     //DEBUG start
-    for(int i = 0; i < 5; ++i) {
-      for(int j = 0; j < 5; ++j) {
-        printf("%f %f %d ", cells[i*params.nx + j].speeds[0], cells[i*params.nx + j].speeds[1], obstacles[i*params.nx + j]);
+    for(int i = 0; i < params.ny; ++i) {
+      for(int j = 0; j < params.nx; ++j) {
+        //printf("%f %f %d ", cells[i*params.nx + j].speeds[0], cells[i*params.nx + j].speeds[1], obstacles[i*params.nx + j]);
         for(int z = 0; z < NSPEEDS; ++z) {
           cells[i*params.nx + j].speeds[z] = -3;
         }
         obstacles[i*params.nx + j] = -3;
       }
-      printf("\n\n");
+      //printf("\n\n");
     }
-
+    test_run("TEST_intermediate_vals.txt", params.nx, params.ny, cells, obstacles);
   }
   params.maxIters = 0;
   printf("test3\n");
@@ -354,6 +356,7 @@ int main(int argc, char* argv[])
 
   //DEBUG start
   if(rank == 0) {
+    test_run("TEST_final_vals.txt", params.nx, params.ny, cells, obstacles);
     printf("FINAL VALS:\n");
     for(int i = 0; i < 5; ++i) {
       for(int j = 1; j < 5; ++j) {
@@ -605,6 +608,35 @@ int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obs
   }
 
   return EXIT_SUCCESS;
+}
+
+void test_run(const char* output_file, int nx, int ny, t_speed *cells, int *obstacles) {
+  FILE* fp = fopen(output_file, "w");
+  char message[1024];
+
+  if (fp == NULL)
+  {
+    sprintf(message, "could not open input parameter file: %s", output_file);
+    die(message, __LINE__, __FILE__);
+  }
+
+  for(int i = 0; i < ny; ++i) {
+    for(int j = 0; j < nx; ++j) {
+      for(int z = 0; z < NSPEEDS; ++z) {
+        fprintf(fp, "%f ", cells[i*nx + j].speeds[z]);
+      }
+
+    }
+  }
+  fprintf(fp, "\n\n");
+
+  for(int i = 0; i < ny; ++i) {
+    for(int j = 0; j < nx; ++j) {
+      fprintf(fp, "%d ", obstacles[i*nx + j]);
+    }
+  }
+
+  fclose(fp);
 }
 
 float av_velocity(const t_param params, t_speed* cells, int* obstacles)
