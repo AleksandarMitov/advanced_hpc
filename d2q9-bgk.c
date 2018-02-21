@@ -52,6 +52,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <mpi.h>
 #include <time.h>
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -98,6 +99,7 @@ int propagate(const t_param params, t_speed* cells, t_speed* tmp_cells);
 int rebound(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles);
 int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles);
 int write_values(const t_param params, t_speed* cells, int* obstacles, float* av_vels);
+int calc_ncols_from_rank(int rank, int size, int nx);
 
 /* finalise, including freeing up allocated memory */
 int finalise(const t_param* params, t_speed** cells_ptr, t_speed** tmp_cells_ptr,
@@ -187,19 +189,19 @@ int main(int argc, char* argv[])
   process_params.nx = process_cols + 2; //add 2 for halo exchanges
 
   /* main grid */
-  *process_cells = (t_speed*)malloc(sizeof(t_speed) * (process_params.ny * process_params.nx));
+  t_speed *process_cells = (t_speed*)malloc(sizeof(t_speed) * (process_params.ny * process_params.nx));
 
-  if (*process_cells == NULL) die("cannot allocate memory for cells", __LINE__, __FILE__);
+  if (process_cells == NULL) die("cannot allocate memory for cells", __LINE__, __FILE__);
 
   /* 'helper' grid, used as scratch space */
-  *process_tmp_cells = (t_speed*)malloc(sizeof(t_speed) * (process_params.ny * process_params.nx));
+  t_speed *process_tmp_cells = (t_speed*)malloc(sizeof(t_speed) * (process_params.ny * process_params.nx));
 
-  if (*process_tmp_cells == NULL) die("cannot allocate memory for tmp_cells", __LINE__, __FILE__);
+  if (process_tmp_cells == NULL) die("cannot allocate memory for tmp_cells", __LINE__, __FILE__);
 
   /* the map of obstacles */
-  *process_obstacles = malloc(sizeof(int) * (process_params.ny * process_params.nx));
+  int *process_obstacles = malloc(sizeof(int) * (process_params.ny * process_params.nx));
 
-  if (*process_obstacles == NULL) die("cannot allocate column memory for obstacles", __LINE__, __FILE__);
+  if (process_obstacles == NULL) die("cannot allocate column memory for obstacles", __LINE__, __FILE__);
 
   float* sendbuf_cells = (float*)malloc(sizeof(float) * NSPEEDS * process_params.ny);
   int* sendbuf_obstacles = (int*)malloc(sizeof(int) * process_params.ny);
@@ -238,7 +240,7 @@ int main(int argc, char* argv[])
   } else {
     //receive initial values
     for(int j = 0; j < process_params.nx; ++j) {
-      MPI_Recv(recvbuf_cells, process_params.ny*NSPEEDS, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
+      MPI_Recv(recvbuf_cells, process_params.ny*NSPEEDS, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
       for(int i = 0; i < process_params.ny; ++i) {
         t_speed speeds;
         for(int z = 0; z < NSPEEDS; ++z) {
@@ -246,7 +248,7 @@ int main(int argc, char* argv[])
         }
         process_cells[i*process_params.nx + j + 1] = speeds;
       }
-      MPI_Recv(recvbuf_obstacles, process_params.ny, MPI_INT, 0, 1, MPI_COMM_WORLD);
+      MPI_Recv(recvbuf_obstacles, process_params.ny, MPI_INT, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
       for(int i = 0; i < process_params.ny; ++i) {
         process_obstacles[i*process_params.nx + j + 1] = recvbuf_obstacles[i];
       }
@@ -256,8 +258,10 @@ int main(int argc, char* argv[])
   //DEBUG start
   for(int i = 0; i < 10; ++i) {
     for(int j = 0; j < 10; ++j) {
-      printf("%f %f ", cells[i*params.nx + j], obstacles[i*params.nx + j]);
-      cells[i*params.nx + j] = -3;
+      printf("%f %f %d ", cells[i*params.nx + j].speeds[0], cells[i*params.nx + j].speeds[1], obstacles[i*params.nx + j]);
+      for(int z = 0; z < NSPEEDS; ++z) {
+        cells[i*params.nx + j].speeds[z] = -3;
+      }
       obstacles[i*params.nx + j] = -3;
     }
     printf("\n");
@@ -292,7 +296,7 @@ int main(int argc, char* argv[])
       int i_process_cols = calc_ncols_from_rank(i, size, params.nx);
       int cols_per_rank = params.nx / size;
       for(int j = i*cols_per_rank; j < i*cols_per_rank + i_process_cols; ++j) {
-        MPI_Recv(recvbuf_cells, process_params.ny*NSPEEDS, MPI_FLOAT, i, 0, MPI_COMM_WORLD);
+        MPI_Recv(recvbuf_cells, process_params.ny*NSPEEDS, MPI_FLOAT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         for(int k = 0; k < process_params.ny; ++k) {
           t_speed speeds;
           for(int z = 0; z < NSPEEDS; ++z) {
@@ -300,9 +304,9 @@ int main(int argc, char* argv[])
           }
           cells[k*params.nx + j] = speeds;
         }
-        MPI_Recv(recvbuf_obstacles, process_params.ny, MPI_INT, i, 1, MPI_COMM_WORLD);
+        MPI_Recv(recvbuf_obstacles, process_params.ny, MPI_INT, i, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         for(int k = 0; k < process_params.ny; ++k) {
-          obstacles[k*params.nx + j]; = recvbuf_obstacles[k];
+          obstacles[k*params.nx + j] = recvbuf_obstacles[k];
         }
       }
     }
@@ -327,7 +331,7 @@ int main(int argc, char* argv[])
   //DEBUG start
   for(int i = 0; i < 10; ++i) {
     for(int j = 0; j < 10; ++j) {
-      printf("%f %f ", cells[i*params.nx + j], obstacles[i*params.nx + j]);
+      printf("%f %f %d ", cells[i*params.nx + j].speeds[0], cells[i*params.nx + j].speeds[1], obstacles[i*params.nx + j]);
     }
     printf("\n");
   }
