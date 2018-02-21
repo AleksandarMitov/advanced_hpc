@@ -292,6 +292,54 @@ int main(int argc, char* argv[])
   // start work
   for (int tt = 0; tt < params.maxIters; tt++)
   {
+    //exchange halos
+    int left = (rank == 0) ? (rank + size - 1) : (rank - 1);
+    int right = (rank + 1) % size;
+    //send to the left, receive from right
+    //fill with left col
+    for(int i = 0; i < process.params.ny; ++i) {
+      for(int z = 0; z < NSPEEDS; ++z) {
+        sendbuf_cells[i*NSPEEDS + z] = process_cells[i*process_params.nx + 1].speeds[z];
+      }
+      sendbuf_obstacles[i] = process_obstacles[i*process_params.nx + 1];
+    }
+
+    MPI_Sendrecv(sendbuf_cells,  process_params.ny*NSPEEDS, MPI_FLOAT, left, 0, recvbuf_cells,
+                process_params.ny*NSPEEDS, MPI_FLOAT, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Sendrecv(sendbuf_obstacles,  process_params.ny, MPI_INT, left, 1, recvbuf_obstacles,
+                process_params.ny, MPI_INT, right, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    //populate right col
+    for(int i = 0; i < process_params.ny; ++i) {
+      t_speed speeds;
+      for(int z = 0; z < NSPEEDS; ++z) {
+        speeds.speeds[z] = recvbuf_cells[i*NSPEEDS + z];
+      }
+      process_cells[i*process_params.nx + process_params.nx -1] = speeds;
+      process_obstacles[i*process_params.nx + process_params.nx -1] = recvbuf_obstacles[i];
+    }
+    //send to right, receive from left
+    //fill with right col
+    for(int i = 0; i < process.params.ny; ++i) {
+      for(int z = 0; z < NSPEEDS; ++z) {
+        sendbuf_cells[i*NSPEEDS + z] = process_cells[i*process_params.nx + process_params.nx -2].speeds[z];
+      }
+      sendbuf_obstacles[i] = process_obstacles[i*process_params.nx + process_params.nx -2];
+    }
+    MPI_Sendrecv(sendbuf_cells,  process_params.ny*NSPEEDS, MPI_FLOAT, right, 0, recvbuf_cells,
+                process_params.ny*NSPEEDS, MPI_FLOAT, left, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Sendrecv(sendbuf_obstacles,  process_params.ny, MPI_INT, right, 1, recvbuf_obstacles,
+                process_params.ny, MPI_INT, left, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    //populate left col
+    for(int i = 0; i < process_params.ny; ++i) {
+      t_speed speeds;
+      for(int z = 0; z < NSPEEDS; ++z) {
+        speeds.speeds[z] = recvbuf_cells[i*NSPEEDS + z];
+      }
+      process_cells[i*process_params.nx] = speeds;
+      process_obstacles[i*process_params.nx] = recvbuf_obstacles[i];
+    }
+
+    //now do computations
     timestep(params, cells, tmp_cells, obstacles);
     av_vels[tt] = av_velocity(params, cells, obstacles);
 #ifdef DEBUG
@@ -426,7 +474,7 @@ int accelerate_flow(const t_param params, t_speed* cells, int* obstacles)
   /* modify the 2nd row of the grid */
   int jj = params.ny - 2;
 
-  for (int ii = 0; ii < params.nx; ii++)
+  for (int ii = 1; ii < params.nx-1; ii++)
   {
     /* if the cell is not occupied and
     ** we don't send a negative density */
@@ -454,7 +502,7 @@ int propagate(const t_param params, t_speed* cells, t_speed* tmp_cells)
   /* loop over _all_ cells */
   for (int jj = 0; jj < params.ny; jj++)
   {
-    for (int ii = 0; ii < params.nx; ii++)
+    for (int ii = 1; ii < params.nx-1; ii++)
     {
       /* determine indices of axis-direction neighbours
       ** respecting periodic boundary conditions (wrap around) */
@@ -485,7 +533,7 @@ int rebound(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obsta
   /* loop over the cells in the grid */
   for (int jj = 0; jj < params.ny; jj++)
   {
-    for (int ii = 0; ii < params.nx; ii++)
+    for (int ii = 1; ii < params.nx-1; ii++)
     {
       /* if the cell contains an obstacle */
       if (obstacles[jj*params.nx + ii])
@@ -520,7 +568,7 @@ int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obs
   ** are in the scratch-space grid */
   for (int jj = 0; jj < params.ny; jj++)
   {
-    for (int ii = 0; ii < params.nx; ii++)
+    for (int ii = 1; ii < params.nx-1; ii++)
     {
       /* don't consider occupied cells */
       if (!obstacles[ii + jj*params.nx])
@@ -650,7 +698,7 @@ float av_velocity(const t_param params, t_speed* cells, int* obstacles)
   /* loop over all non-blocked cells */
   for (int jj = 0; jj < params.ny; jj++)
   {
-    for (int ii = 0; ii < params.nx; ii++)
+    for (int ii = 1; ii < params.nx-1; ii++)
     {
       /* ignore occupied cells */
       if (!obstacles[ii + jj*params.nx])
