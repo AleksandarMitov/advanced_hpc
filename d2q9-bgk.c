@@ -184,7 +184,7 @@ int main(int argc, char* argv[])
   //MPI process subgrid
   int process_cols = calc_ncols_from_rank(rank, size, params.nx);
   t_param  process_params = params;  // copy values
-  process_params.nx = process_cols;
+  process_params.nx = process_cols + 2; //add 2 for halo exchanges
 
   /* main grid */
   *process_cells = (t_speed*)malloc(sizeof(t_speed) * (process_params.ny * process_params.nx));
@@ -220,13 +220,44 @@ int main(int argc, char* argv[])
     for(int i = 1; i < size; ++i) {
       int i_process_cols = calc_ncols_from_rank(i, size, params.nx);
       int cols_per_rank = params.nx / size;
-      for(int j = 0; j < i_process_cols; ++j) {
-        sendbuf[j] =
+      for(int j = i*cols_per_rank; j < i*cols_per_rank + i_process_cols; ++j) {
+        for(int k = 0; k < process_params.ny; ++k) {
+          sendbuf[k] = cells[k*params.nx + j];
+        }
+        MPI_Send(sendbuf, process_params.ny, );
+        for(int k = 0; k < process_params.ny; ++k) {
+          sendbuf[k] = obstacles[k*params.nx + j];
+        }
+        MPI_Send(sendbuff);
+      }
+    }
+  } else {
+    //receive initial values
+    for(int j = 0; j < process_params.nx; ++j) {
+      MPR_RECIEVE(recvbuf);
+      for(int i = 0; i < process_params.ny; ++i) {
+        process_cells[i*process_params.nx + j + 1] = recvbuf[i];
+      }
+      MPR_RECIEVE(recvbuf);
+      for(int i = 0; i < process_params.ny; ++i) {
+        process_obstacles[i*process_params.nx + j + 1] = recvbuf[i];
       }
     }
   }
 
+  //DEBUG start
+  for(int i = 0; i < 10; ++i) {
+    for(int j = 0; j < 10; ++j) {
+      printf("%f %f ", cells[i*params.nx + j], obstacles[i*params.nx + j]);
+      cells[i*params.nx + j] = -3;
+      obstacles[i*params.nx + j] = -3;
+    }
+    printf("\n");
+  }
+  params.maxIters = 0;
+  //DEBUG END
 
+  // start work
   for (int tt = 0; tt < params.maxIters; tt++)
   {
     timestep(params, cells, tmp_cells, obstacles);
@@ -238,22 +269,73 @@ int main(int argc, char* argv[])
 #endif
   }
 
-  gettimeofday(&timstr, NULL);
-  toc = timstr.tv_sec + (timstr.tv_usec / 1000000.0);
-  getrusage(RUSAGE_SELF, &ru);
-  timstr = ru.ru_utime;
-  usrtim = timstr.tv_sec + (timstr.tv_usec / 1000000.0);
-  timstr = ru.ru_stime;
-  systim = timstr.tv_sec + (timstr.tv_usec / 1000000.0);
+  //receive values in master
+  if(rank == 0) {
+    for(int i = 0; i < process_params.ny; ++i) {
+      for(int j = 0; j < process_params.nx; ++j) {
+        cells[i*(process_params.nx+2) + j + 1] = process_cells[i*params.nx + j];
+        tmp_cells[i*(process_params.nx+2) + j + 1] = process_tmp_cells[i*params.nx + j];
+        obstacles[i*(process_params.nx+2) + j + 1] = process_obstacles[i*params.nx + j];
+      }
+    }
 
-  /* write final values and free memory */
-  printf("==done==\n");
-  printf("Reynolds number:\t\t%.12E\n", calc_reynolds(params, cells, obstacles));
-  printf("Elapsed time:\t\t\t%.6lf (s)\n", toc - tic);
-  printf("Elapsed user CPU time:\t\t%.6lf (s)\n", usrtim);
-  printf("Elapsed system CPU time:\t%.6lf (s)\n", systim);
-  write_values(params, cells, obstacles, av_vels);
-  finalise(&params, &cells, &tmp_cells, &obstacles, &av_vels);
+    //get other processes' grids
+    for(int i = 1; i < size; ++i) {
+      int i_process_cols = calc_ncols_from_rank(i, size, params.nx);
+      int cols_per_rank = params.nx / size;
+      for(int j = i*cols_per_rank; j < i*cols_per_rank + i_process_cols; ++j) {
+        MPI_Receive(recvbuff);
+        for(int k = 0; k < process_params.ny; ++k) {
+          cells[k*params.nx + j] = recvbuff[k];
+        }
+        MPI_Receive(recvbuff);
+        for(int k = 0; k < process_params.ny; ++k) {
+          obstacles[k*params.nx + j]; = recvbuff[k];
+        }
+      }
+    }
+  } else {
+    //get final values
+    for(int j = 0; j < process_params.nx; ++j) {
+      for(int i = 0; i < process_params.ny; ++i) {
+        sendbuf[i] = process_cells[i*process_params.nx + j + 1];
+      }
+
+      for(int i = 0; i < process_params.ny; ++i) {
+        process_obstacles[i*process_params.nx + j + 1] = recvbuf[i];
+        sendbuf[i] = process_obstacles[i*process_params.nx + j + 1];
+      }
+      MPR_SEND(sendbuf);
+    }
+  }
+
+  //DEBUG start
+  for(int i = 0; i < 10; ++i) {
+    for(int j = 0; j < 10; ++j) {
+      printf("%f %f ", cells[i*params.nx + j], obstacles[i*params.nx + j]);
+    }
+    printf("\n");
+  }
+  //DEBUG END
+
+  if(rank == 0) {
+    gettimeofday(&timstr, NULL);
+    toc = timstr.tv_sec + (timstr.tv_usec / 1000000.0);
+    getrusage(RUSAGE_SELF, &ru);
+    timstr = ru.ru_utime;
+    usrtim = timstr.tv_sec + (timstr.tv_usec / 1000000.0);
+    timstr = ru.ru_stime;
+    systim = timstr.tv_sec + (timstr.tv_usec / 1000000.0);
+
+    /* write final values and free memory */
+    printf("==done==\n");
+    printf("Reynolds number:\t\t%.12E\n", calc_reynolds(params, cells, obstacles));
+    printf("Elapsed time:\t\t\t%.6lf (s)\n", toc - tic);
+    printf("Elapsed user CPU time:\t\t%.6lf (s)\n", usrtim);
+    printf("Elapsed system CPU time:\t%.6lf (s)\n", systim);
+    write_values(params, cells, obstacles, av_vels);
+    finalise(&params, &cells, &tmp_cells, &obstacles, &av_vels);
+  }
 
   free(process_cells);
   free(process_tmp_cells);
