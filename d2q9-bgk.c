@@ -284,7 +284,7 @@ int main(int argc, char* argv[])
     }
     test_run("TEST_intermediate_vals.txt", params.nx, params.ny, cells, obstacles);
   }
-  params.maxIters = 0;
+  //params.maxIters = 0;
   printf("test3\n");
   //DEBUG END
 
@@ -297,7 +297,7 @@ int main(int argc, char* argv[])
     int right = (rank + 1) % size;
     //send to the left, receive from right
     //fill with left col
-    for(int i = 0; i < process.params.ny; ++i) {
+    for(int i = 0; i < process_params.ny; ++i) {
       for(int z = 0; z < NSPEEDS; ++z) {
         sendbuf_cells[i*NSPEEDS + z] = process_cells[i*process_params.nx + 1].speeds[z];
       }
@@ -319,7 +319,7 @@ int main(int argc, char* argv[])
     }
     //send to right, receive from left
     //fill with right col
-    for(int i = 0; i < process.params.ny; ++i) {
+    for(int i = 0; i < process_params.ny; ++i) {
       for(int z = 0; z < NSPEEDS; ++z) {
         sendbuf_cells[i*NSPEEDS + z] = process_cells[i*process_params.nx + process_params.nx -2].speeds[z];
       }
