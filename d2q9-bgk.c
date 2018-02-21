@@ -100,6 +100,7 @@ int rebound(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obsta
 int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles);
 int write_values(const t_param params, t_speed* cells, int* obstacles, float* av_vels);
 int calc_ncols_from_rank(int rank, int size, int nx);
+void initialise_params_from_file(const char* paramfile, t_param* params);
 
 /* finalise, including freeing up allocated memory */
 int finalise(const t_param* params, t_speed** cells_ptr, t_speed** tmp_cells_ptr,
@@ -184,11 +185,15 @@ int main(int argc, char* argv[])
   tic = timstr.tv_sec + (timstr.tv_usec / 1000000.0);
 
   //MPI process subgrid
+  initialise_params_from_file(paramfile, &params);
   int process_cols = calc_ncols_from_rank(rank, size, params.nx);
   t_param  process_params = params;  // copy values
   process_params.nx = process_cols + 2; //add 2 for halo exchanges
 
   /* main grid */
+  int sss = sizeof(t_speed) * (params.ny * params.nx);
+  printf("NUMER OF PROCESSES: %d\n", size);
+  printf("BYTES: %d %d %d %d\n\n\n", (int)sizeof(t_speed), process_params.ny, process_params.nx, sss);
   t_speed *process_cells = (t_speed*)malloc(sizeof(t_speed) * (process_params.ny * process_params.nx));
 
   if (process_cells == NULL) die("cannot allocate memory for cells", __LINE__, __FILE__);
@@ -256,15 +261,15 @@ int main(int argc, char* argv[])
   }
 
   //DEBUG start
-  for(int i = 0; i < 10; ++i) {
-    for(int j = 0; j < 10; ++j) {
+  for(int i = 0; i < 5; ++i) {
+    for(int j = 0; j < 5; ++j) {
       printf("%f %f %d ", cells[i*params.nx + j].speeds[0], cells[i*params.nx + j].speeds[1], obstacles[i*params.nx + j]);
       for(int z = 0; z < NSPEEDS; ++z) {
         cells[i*params.nx + j].speeds[z] = -3;
       }
       obstacles[i*params.nx + j] = -3;
     }
-    printf("\n");
+    printf("\n\n");
   }
   params.maxIters = 0;
   //DEBUG END
@@ -329,11 +334,12 @@ int main(int argc, char* argv[])
   }
 
   //DEBUG start
-  for(int i = 0; i < 10; ++i) {
-    for(int j = 0; j < 10; ++j) {
+  printf("FINAL VALS:\n");
+  for(int i = 0; i < 5; ++i) {
+    for(int j = 1; j < 5; ++j) {
       printf("%f %f %d ", cells[i*params.nx + j].speeds[0], cells[i*params.nx + j].speeds[1], obstacles[i*params.nx + j]);
     }
-    printf("\n");
+    printf("\n\n");
   }
   //DEBUG END
 
@@ -629,6 +635,53 @@ float av_velocity(const t_param params, t_speed* cells, int* obstacles)
   }
 
   return tot_u / (float)tot_cells;
+}
+
+void initialise_params_from_file(const char* paramfile, t_param* params) {
+  char   message[1024];  /* message buffer */
+  int    retval;         /* to hold return value for checking */
+  FILE* fp;
+
+  /* open the parameter file */
+  fp = fopen(paramfile, "r");
+
+  if (fp == NULL)
+  {
+    sprintf(message, "could not open input parameter file: %s", paramfile);
+    die(message, __LINE__, __FILE__);
+  }
+
+  /* read in the parameter values */
+  retval = fscanf(fp, "%d\n", &(params->nx));
+
+  if (retval != 1) die("could not read param file: nx", __LINE__, __FILE__);
+
+  retval = fscanf(fp, "%d\n", &(params->ny));
+
+  if (retval != 1) die("could not read param file: ny", __LINE__, __FILE__);
+
+  retval = fscanf(fp, "%d\n", &(params->maxIters));
+
+  if (retval != 1) die("could not read param file: maxIters", __LINE__, __FILE__);
+
+  retval = fscanf(fp, "%d\n", &(params->reynolds_dim));
+
+  if (retval != 1) die("could not read param file: reynolds_dim", __LINE__, __FILE__);
+
+  retval = fscanf(fp, "%f\n", &(params->density));
+
+  if (retval != 1) die("could not read param file: density", __LINE__, __FILE__);
+
+  retval = fscanf(fp, "%f\n", &(params->accel));
+
+  if (retval != 1) die("could not read param file: accel", __LINE__, __FILE__);
+
+  retval = fscanf(fp, "%f\n", &(params->omega));
+
+  if (retval != 1) die("could not read param file: omega", __LINE__, __FILE__);
+
+  /* and close up the file */
+  fclose(fp);
 }
 
 int initialise(const char* paramfile, const char* obstaclefile,
