@@ -218,10 +218,10 @@ int main(int argc, char* argv[])
     initialise(paramfile, obstaclefile, &params, &cells, &tmp_cells, &obstacles, &av_vels);
     //fill in process grid for master process
     for(int i = 0; i < process_params.ny; ++i) {
-      for(int j = 0; j < process_params.nx; ++j) {
-        process_cells[i*(process_params.nx+2) + j + 1] = cells[i*params.nx + j];
-        process_tmp_cells[i*(process_params.nx+2) + j + 1] = tmp_cells[i*params.nx + j];
-        process_obstacles[i*(process_params.nx+2) + j + 1] = obstacles[i*params.nx + j];
+      for(int j = 1; j < process_params.nx-1; ++j) {
+        process_cells[i*(process_params.nx) + j] = cells[i*params.nx + j - 1]; // account for halo exchange left col with -1
+        process_tmp_cells[i*(process_params.nx) + j] = tmp_cells[i*params.nx + j - 1];
+        process_obstacles[i*(process_params.nx) + j] = obstacles[i*params.nx + j - 1];
       }
     }
 
@@ -261,8 +261,8 @@ int main(int argc, char* argv[])
   }
 
   //DEBUG start
-  for(int i = 0; i < 5; ++i) {
-    for(int j = 0; j < 5; ++j) {
+  for(int i = 0; i < params.ny; ++i) {
+    for(int j = 0; j < params.nx; ++j) {
       printf("%f %f %d ", cells[i*params.nx + j].speeds[0], cells[i*params.nx + j].speeds[1], obstacles[i*params.nx + j]);
       for(int z = 0; z < NSPEEDS; ++z) {
         cells[i*params.nx + j].speeds[z] = -3;
@@ -289,10 +289,10 @@ int main(int argc, char* argv[])
   //receive values in master
   if(rank == 0) {
     for(int i = 0; i < process_params.ny; ++i) {
-      for(int j = 0; j < process_params.nx; ++j) {
-        cells[i*(process_params.nx+2) + j + 1] = process_cells[i*params.nx + j];
-        tmp_cells[i*(process_params.nx+2) + j + 1] = process_tmp_cells[i*params.nx + j];
-        obstacles[i*(process_params.nx+2) + j + 1] = process_obstacles[i*params.nx + j];
+      for(int j = 1; j < process_params.nx-1; ++j) {
+        cells[i*params.nx + j - 1] = process_cells[i*(process_params.nx) + j]; // account for halo exchange left col with -1
+        tmp_cells[i*params.nx + j - 1] = process_tmp_cells[i*(process_params.nx) + j];
+        obstacles[i*params.nx + j - 1] = process_obstacles[i*(process_params.nx) + j];
       }
     }
 
@@ -335,8 +335,8 @@ int main(int argc, char* argv[])
 
   //DEBUG start
   printf("FINAL VALS:\n");
-  for(int i = 0; i < 5; ++i) {
-    for(int j = 1; j < 5; ++j) {
+  for(int i = 0; i < params.ny; ++i) {
+    for(int j = 1; j < params.nx; ++j) {
       printf("%f %f %d ", cells[i*params.nx + j].speeds[0], cells[i*params.nx + j].speeds[1], obstacles[i*params.nx + j]);
     }
     printf("\n\n");
