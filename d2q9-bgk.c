@@ -201,8 +201,10 @@ int main(int argc, char* argv[])
 
   if (*process_obstacles == NULL) die("cannot allocate column memory for obstacles", __LINE__, __FILE__);
 
-  t_speed* sendbuf = (t_speed*)malloc(sizeof(t_speed) * process_params.ny);
-  t_speed* recvbuf = (t_speed*)malloc(sizeof(t_speed) * process_params.ny);
+  float* sendbuf_cells = (float*)malloc(sizeof(float) * NSPEEDS * process_params.ny);
+  int* sendbuf_obstacles = (int*)malloc(sizeof(int) * process_params.ny);
+  float* recvbuf_cells = (float*)malloc(sizeof(float) * NSPEEDS * process_params.ny);
+  int* recvbuf_obstacles = (int*)malloc(sizeof(int) * process_params.ny);
 
   if(rank == 0) {
     /* initialise our data structures and load values from file */
@@ -222,25 +224,31 @@ int main(int argc, char* argv[])
       int cols_per_rank = params.nx / size;
       for(int j = i*cols_per_rank; j < i*cols_per_rank + i_process_cols; ++j) {
         for(int k = 0; k < process_params.ny; ++k) {
-          sendbuf[k] = cells[k*params.nx + j];
+          for(int z = 0; z < NSPEEDS; ++z) {
+            sendbuf_cells[k*NSPEEDS + z] = cells[k*params.nx + j].speeds[z];
+          }
         }
-        MPI_Send(sendbuf, process_params.ny, );
+        MPI_Send(sendbuf_cells, process_params.ny*NSPEEDS, MPI_FLOAT, i, 0, MPI_COMM_WORLD);
         for(int k = 0; k < process_params.ny; ++k) {
-          sendbuf[k] = obstacles[k*params.nx + j];
+          sendbuf_obstacles[k] = obstacles[k*params.nx + j];
         }
-        MPI_Send(sendbuff);
+        MPI_Send(sendbuf_obstacles, process_params.ny, MPI_INT, i, 1, MPI_COMM_WORLD);
       }
     }
   } else {
     //receive initial values
     for(int j = 0; j < process_params.nx; ++j) {
-      MPR_RECIEVE(recvbuf);
+      MPI_Recv(recvbuf_cells, process_params.ny*NSPEEDS, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
       for(int i = 0; i < process_params.ny; ++i) {
-        process_cells[i*process_params.nx + j + 1] = recvbuf[i];
+        t_speed speeds;
+        for(int z = 0; z < NSPEEDS; ++z) {
+          speeds.speeds[z] = recvbuf_cells[i*NSPEEDS + z];
+        }
+        process_cells[i*process_params.nx + j + 1] = speeds;
       }
-      MPR_RECIEVE(recvbuf);
+      MPI_Recv(recvbuf_obstacles, process_params.ny, MPI_INT, 0, 1, MPI_COMM_WORLD);
       for(int i = 0; i < process_params.ny; ++i) {
-        process_obstacles[i*process_params.nx + j + 1] = recvbuf[i];
+        process_obstacles[i*process_params.nx + j + 1] = recvbuf_obstacles[i];
       }
     }
   }
@@ -284,28 +292,35 @@ int main(int argc, char* argv[])
       int i_process_cols = calc_ncols_from_rank(i, size, params.nx);
       int cols_per_rank = params.nx / size;
       for(int j = i*cols_per_rank; j < i*cols_per_rank + i_process_cols; ++j) {
-        MPI_Receive(recvbuff);
+        MPI_Recv(recvbuf_cells, process_params.ny*NSPEEDS, MPI_FLOAT, i, 0, MPI_COMM_WORLD);
         for(int k = 0; k < process_params.ny; ++k) {
-          cells[k*params.nx + j] = recvbuff[k];
+          t_speed speeds;
+          for(int z = 0; z < NSPEEDS; ++z) {
+            speeds.speeds[z] = recvbuf_cells[k*NSPEEDS + z];
+          }
+          cells[k*params.nx + j] = speeds;
         }
-        MPI_Receive(recvbuff);
+        MPI_Recv(recvbuf_obstacles, process_params.ny, MPI_INT, i, 1, MPI_COMM_WORLD);
         for(int k = 0; k < process_params.ny; ++k) {
-          obstacles[k*params.nx + j]; = recvbuff[k];
+          obstacles[k*params.nx + j]; = recvbuf_obstacles[k];
         }
       }
     }
   } else {
-    //get final values
+    //send final values
     for(int j = 0; j < process_params.nx; ++j) {
       for(int i = 0; i < process_params.ny; ++i) {
-        sendbuf[i] = process_cells[i*process_params.nx + j + 1];
+        for(int z = 0; z < NSPEEDS; ++z) {
+          sendbuf_cells[i*NSPEEDS + z] = process_cells[i*process_params.nx + j + 1].speeds[z];
+        }
       }
+      MPI_Send(sendbuf_cells, process_params.ny*NSPEEDS, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
 
       for(int i = 0; i < process_params.ny; ++i) {
-        process_obstacles[i*process_params.nx + j + 1] = recvbuf[i];
-        sendbuf[i] = process_obstacles[i*process_params.nx + j + 1];
+        //process_obstacles[i*process_params.nx + j + 1] = recvbuf[i];
+        sendbuf_obstacles[i] = process_obstacles[i*process_params.nx + j + 1];
       }
-      MPR_SEND(sendbuf);
+      MPI_Send(sendbuf_obstacles, process_params.ny, MPI_INT, 0, 1, MPI_COMM_WORLD);
     }
   }
 
