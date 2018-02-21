@@ -147,17 +147,6 @@ int main(int argc, char* argv[])
   enum bool {FALSE,TRUE}; /* enumerated type: false = 0, true = 1 */
   char hostname[MPI_MAX_PROCESSOR_NAME];  /* character array to hold hostname running process */
 
-  /* parse the command line */
-  if (argc != 3)
-  {
-    usage(argv[0]);
-  }
-  else
-  {
-    paramfile = argv[1];
-    obstaclefile = argv[2];
-  }
-
   /* initialise our MPI environment */
   MPI_Init( &argc, &argv );
 
@@ -176,9 +165,23 @@ int main(int argc, char* argv[])
   ** consisting of all the processes in the launched MPI 'job'
   */
   MPI_Comm_size( MPI_COMM_WORLD, &size );
+  printf("SIZE: %d\n", size);
 
   /* determine the RANK of the current process [0:SIZE-1] */
   MPI_Comm_rank( MPI_COMM_WORLD, &rank );
+
+  /* parse the command line */
+  if (argc != 3)
+  {
+    usage(argv[0]);
+  }
+  else
+  {
+    paramfile = argv[1];
+    obstaclefile = argv[2];
+  }
+
+
 
   /* iterate for maxIters timesteps */
   gettimeofday(&timstr, NULL);
@@ -193,6 +196,7 @@ int main(int argc, char* argv[])
   /* main grid */
   int sss = sizeof(t_speed) * (params.ny * params.nx);
   printf("NUMER OF PROCESSES: %d\n", size);
+  printf("RANK: %d\n", rank);
   printf("BYTES: %d %d %d %d\n\n\n", (int)sizeof(t_speed), process_params.ny, process_params.nx, sss);
   t_speed *process_cells = (t_speed*)malloc(sizeof(t_speed) * (process_params.ny * process_params.nx));
 
@@ -212,6 +216,8 @@ int main(int argc, char* argv[])
   int* sendbuf_obstacles = (int*)malloc(sizeof(int) * process_params.ny);
   float* recvbuf_cells = (float*)malloc(sizeof(float) * NSPEEDS * process_params.ny);
   int* recvbuf_obstacles = (int*)malloc(sizeof(int) * process_params.ny);
+
+  printf("test1\n");
 
   if(rank == 0) {
     /* initialise our data structures and load values from file */
@@ -235,44 +241,51 @@ int main(int argc, char* argv[])
             sendbuf_cells[k*NSPEEDS + z] = cells[k*params.nx + j].speeds[z];
           }
         }
-        MPI_Send(sendbuf_cells, process_params.ny*NSPEEDS, MPI_FLOAT, i, 0, MPI_COMM_WORLD);
+        MPI_Ssend(sendbuf_cells, process_params.ny*NSPEEDS, MPI_FLOAT, i, 0, MPI_COMM_WORLD);
         for(int k = 0; k < process_params.ny; ++k) {
           sendbuf_obstacles[k] = obstacles[k*params.nx + j];
         }
-        MPI_Send(sendbuf_obstacles, process_params.ny, MPI_INT, i, 1, MPI_COMM_WORLD);
+        MPI_Ssend(sendbuf_obstacles, process_params.ny, MPI_INT, i, 1, MPI_COMM_WORLD);
       }
     }
   } else {
+    printf("TEST 1.1!\n");
     //receive initial values
-    for(int j = 0; j < process_params.nx; ++j) {
+    for(int j = 1; j < process_params.nx-1; ++j) {
+      printf("rank %d waiting to receive its col %d\n", rank, j);
       MPI_Recv(recvbuf_cells, process_params.ny*NSPEEDS, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
       for(int i = 0; i < process_params.ny; ++i) {
         t_speed speeds;
         for(int z = 0; z < NSPEEDS; ++z) {
           speeds.speeds[z] = recvbuf_cells[i*NSPEEDS + z];
         }
-        process_cells[i*process_params.nx + j + 1] = speeds;
+        process_cells[i*process_params.nx + j] = speeds;
       }
       MPI_Recv(recvbuf_obstacles, process_params.ny, MPI_INT, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
       for(int i = 0; i < process_params.ny; ++i) {
-        process_obstacles[i*process_params.nx + j + 1] = recvbuf_obstacles[i];
+        process_obstacles[i*process_params.nx + j] = recvbuf_obstacles[i];
       }
     }
   }
-
-  //DEBUG start
-  for(int i = 0; i < params.ny; ++i) {
-    for(int j = 0; j < params.nx; ++j) {
-      printf("%f %f %d ", cells[i*params.nx + j].speeds[0], cells[i*params.nx + j].speeds[1], obstacles[i*params.nx + j]);
-      for(int z = 0; z < NSPEEDS; ++z) {
-        cells[i*params.nx + j].speeds[z] = -3;
+  printf("test2\n");
+  if(rank == 0) {
+    //DEBUG start
+    for(int i = 0; i < 5; ++i) {
+      for(int j = 0; j < 5; ++j) {
+        printf("%f %f %d ", cells[i*params.nx + j].speeds[0], cells[i*params.nx + j].speeds[1], obstacles[i*params.nx + j]);
+        for(int z = 0; z < NSPEEDS; ++z) {
+          cells[i*params.nx + j].speeds[z] = -3;
+        }
+        obstacles[i*params.nx + j] = -3;
       }
-      obstacles[i*params.nx + j] = -3;
+      printf("\n\n");
     }
-    printf("\n\n");
+
   }
   params.maxIters = 0;
+  printf("test3\n");
   //DEBUG END
+
 
   // start work
   for (int tt = 0; tt < params.maxIters; tt++)
@@ -286,6 +299,7 @@ int main(int argc, char* argv[])
 #endif
   }
 
+  printf("test4\n");
   //receive values in master
   if(rank == 0) {
     for(int i = 0; i < process_params.ny; ++i) {
@@ -295,6 +309,8 @@ int main(int argc, char* argv[])
         obstacles[i*params.nx + j - 1] = process_obstacles[i*(process_params.nx) + j];
       }
     }
+
+    printf("test5\n");
 
     //get other processes' grids
     for(int i = 1; i < size; ++i) {
@@ -315,31 +331,36 @@ int main(int argc, char* argv[])
         }
       }
     }
+    printf("test6\n");
   } else {
+    printf("test7\n");
     //send final values
-    for(int j = 0; j < process_params.nx; ++j) {
+    for(int j = 1; j < process_params.nx-1; ++j) {
       for(int i = 0; i < process_params.ny; ++i) {
         for(int z = 0; z < NSPEEDS; ++z) {
-          sendbuf_cells[i*NSPEEDS + z] = process_cells[i*process_params.nx + j + 1].speeds[z];
+          sendbuf_cells[i*NSPEEDS + z] = process_cells[i*process_params.nx + j].speeds[z];
         }
       }
-      MPI_Send(sendbuf_cells, process_params.ny*NSPEEDS, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
+      MPI_Ssend(sendbuf_cells, process_params.ny*NSPEEDS, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
 
       for(int i = 0; i < process_params.ny; ++i) {
         //process_obstacles[i*process_params.nx + j + 1] = recvbuf[i];
-        sendbuf_obstacles[i] = process_obstacles[i*process_params.nx + j + 1];
+        sendbuf_obstacles[i] = process_obstacles[i*process_params.nx + j];
       }
-      MPI_Send(sendbuf_obstacles, process_params.ny, MPI_INT, 0, 1, MPI_COMM_WORLD);
+      MPI_Ssend(sendbuf_obstacles, process_params.ny, MPI_INT, 0, 1, MPI_COMM_WORLD);
     }
+    printf("tst8\n");
   }
 
   //DEBUG start
-  printf("FINAL VALS:\n");
-  for(int i = 0; i < params.ny; ++i) {
-    for(int j = 1; j < params.nx; ++j) {
-      printf("%f %f %d ", cells[i*params.nx + j].speeds[0], cells[i*params.nx + j].speeds[1], obstacles[i*params.nx + j]);
+  if(rank == 0) {
+    printf("FINAL VALS:\n");
+    for(int i = 0; i < 5; ++i) {
+      for(int j = 1; j < 5; ++j) {
+        printf("%f %f %d ", cells[i*params.nx + j].speeds[0], cells[i*params.nx + j].speeds[1], obstacles[i*params.nx + j]);
+      }
+      printf("\n\n");
     }
-    printf("\n\n");
   }
   //DEBUG END
 
