@@ -199,6 +199,7 @@ int main(int argc, char* argv[])
   printf("NUMER OF PROCESSES: %d\n", size);
   printf("RANK: %d\n", rank);
   printf("BYTES: %d %d %d %d\n\n\n", (int)sizeof(t_speed), process_params.ny, process_params.nx, sss);
+  av_vels = (float*)malloc(sizeof(float) * params.maxIters);
   t_speed *process_cells = (t_speed*)malloc(sizeof(t_speed) * (process_params.ny * process_params.nx));
 
   if (process_cells == NULL) die("cannot allocate memory for cells", __LINE__, __FILE__);
@@ -217,6 +218,8 @@ int main(int argc, char* argv[])
   int* sendbuf_obstacles = (int*)malloc(sizeof(int) * process_params.ny);
   float* recvbuf_cells = (float*)malloc(sizeof(float) * NSPEEDS * process_params.ny);
   int* recvbuf_obstacles = (int*)malloc(sizeof(int) * process_params.ny);
+  float* sendbuf_av_vels = (float*)malloc(sizeof(float) * process_params.maxIters);
+  float* recvbuf_av_vels = (float*)malloc(sizeof(float) * process_params.maxIters);
 
   printf("test1\n");
 
@@ -381,6 +384,17 @@ int main(int argc, char* argv[])
         }
       }
     }
+
+    //get av_vels from processes
+    for(int i = 1; i < size; ++i) {
+      MPI_Recv(recvbuf_av_vels, process_params.maxIters, MPI_FLOAT, i, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      for(int j = 0; j < process_params.maxIters; ++j) {
+        av_vels[j] += recvbuf_av_vels[j];
+      }
+    }
+    for(int i = 0; i < process_params.maxIters; ++i) {
+      av_vels[i] /= size;
+    }
     printf("test6\n");
   } else {
     printf("test7\n");
@@ -399,6 +413,11 @@ int main(int argc, char* argv[])
       }
       MPI_Ssend(sendbuf_obstacles, process_params.ny, MPI_INT, 0, 1, MPI_COMM_WORLD);
     }
+    //send av_vels to master
+    for(int i = 0; i < process_params.maxIters; ++i) {
+      sendbuf_av_vels[i] = av_vels[i];
+    }
+    MPI_Ssend(sendbuf_av_vels, process_params.maxIters, MPI_FLOAT, 0, 2, MPI_COMM_WORLD);
     printf("tst8\n");
   }
 
@@ -787,7 +806,7 @@ void initialise_params_from_file(const char* paramfile, t_param* params) {
 
 int initialise(const char* paramfile, const char* obstaclefile,
                t_param* params, t_speed** cells_ptr, t_speed** tmp_cells_ptr,
-               int** obstacles_ptr, float** av_vels_ptr)
+               int** obstacles_ptr)
 {
   char   message[1024];  /* message buffer */
   FILE*   fp;            /* file pointer */
@@ -930,12 +949,6 @@ int initialise(const char* paramfile, const char* obstaclefile,
 
   /* and close the file */
   fclose(fp);
-
-  /*
-  ** allocate space to hold a record of the avarage velocities computed
-  ** at each timestep
-  */
-  *av_vels_ptr = (float*)malloc(sizeof(float) * params->maxIters);
 
   return EXIT_SUCCESS;
 }
