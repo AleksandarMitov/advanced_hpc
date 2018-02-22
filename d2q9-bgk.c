@@ -133,7 +133,7 @@ int main(int argc, char* argv[])
   t_speed* cells     = NULL;    /* grid containing fluid densities */
   t_speed* tmp_cells = NULL;    /* scratch space */
   int*     obstacles = NULL;    /* grid indicating which cells are blocked */
-  float* av_vels   = NULL;     /* a record of the av. velocity computed for each timestep */
+  double* av_vels   = NULL;     /* a record of the av. velocity computed for each timestep */
   struct timeval timstr;        /* structure to hold elapsed time */
   struct rusage ru;             /* structure to hold CPU time--system and user */
   double tic, toc;              /* floating point numbers to calculate elapsed wallclock time */
@@ -199,7 +199,7 @@ int main(int argc, char* argv[])
   printf("NUMER OF PROCESSES: %d\n", size);
   printf("RANK: %d\n", rank);
   printf("BYTES: %d %d %d %d\n\n\n", (int)sizeof(t_speed), process_params.ny, process_params.nx, sss);
-  av_vels = (float*)malloc(sizeof(float) * params.maxIters);
+  av_vels = (double*)malloc(sizeof(double) * params.maxIters);
   t_speed *process_cells = (t_speed*)malloc(sizeof(t_speed) * (process_params.ny * process_params.nx));
 
   if (process_cells == NULL) die("cannot allocate memory for cells", __LINE__, __FILE__);
@@ -218,8 +218,8 @@ int main(int argc, char* argv[])
   int* sendbuf_obstacles = (int*)malloc(sizeof(int) * process_params.ny);
   float* recvbuf_cells = (float*)malloc(sizeof(float) * NSPEEDS * process_params.ny);
   int* recvbuf_obstacles = (int*)malloc(sizeof(int) * process_params.ny);
-  float* sendbuf_av_vels = (float*)malloc(sizeof(float) * process_params.maxIters);
-  float* recvbuf_av_vels = (float*)malloc(sizeof(float) * process_params.maxIters);
+  double* sendbuf_av_vels = (double*)malloc(sizeof(double) * process_params.maxIters);
+  double* recvbuf_av_vels = (double*)malloc(sizeof(double) * process_params.maxIters);
 
   printf("test1\n");
 
@@ -707,10 +707,10 @@ void test_run(const char* output_file, int nx, int ny, t_speed *cells, int *obst
   fclose(fp);
 }
 
-float av_velocity(const t_param params, t_speed* cells, int* obstacles)
+double av_velocity(const t_param params, t_speed* cells, int* obstacles)
 {
   int    tot_cells = 0;  /* no. of cells used in calculation */
-  float tot_u;          /* accumulated magnitudes of velocity for each cell */
+  double tot_u;          /* accumulated magnitudes of velocity for each cell */
 
   /* initialise */
   tot_u = 0.f;
@@ -724,7 +724,7 @@ float av_velocity(const t_param params, t_speed* cells, int* obstacles)
       if (!obstacles[ii + jj*params.nx])
       {
         /* local density total */
-        float local_density = 0.f;
+        double local_density = 0.f;
 
         for (int kk = 0; kk < NSPEEDS; kk++)
         {
@@ -755,7 +755,7 @@ float av_velocity(const t_param params, t_speed* cells, int* obstacles)
     }
   }
 
-  return tot_u / (float)tot_cells;
+  return tot_u / (double)tot_cells;
 }
 
 void initialise_params_from_file(const char* paramfile, t_param* params) {
