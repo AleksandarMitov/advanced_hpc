@@ -140,6 +140,7 @@ int main(int argc, char* argv[])
   double tic, toc;              /* floating point numbers to calculate elapsed wallclock time */
   double usrtim;                /* floating point number to record elapsed user CPU time */
   double systim;                /* floating point number to record elapsed system CPU time */
+  unsigned long long int flow_cells = 0; // number of cells without obstacles
 
   //MPI related
   int rank;               /* 'rank' of process among it's cohort */
@@ -225,6 +226,13 @@ int main(int argc, char* argv[])
   if(rank == 0) {
     /* initialise our data structures and load values from file */
     initialise(paramfile, obstaclefile, &params, &cells, &tmp_cells, &obstacles);
+    for(int i = 0; i < params.ny; ++i) {
+      for(int j = 0; j < params.nx; ++j) {
+        if(!obstacles[i*params.nx + j]) {
+          ++flow_cells;
+        }
+      }
+    }
     test_run("TEST_initial_vals.txt", params.nx, params.ny, cells, obstacles);
     //fill in process grid for master process
     for(int i = 0; i < process_params.ny; ++i) {
@@ -272,16 +280,16 @@ int main(int argc, char* argv[])
   }
   if(rank == 0) {
     //DEBUG start
-    for(int i = 0; i < params.ny; ++i) {
+    /*for(int i = 0; i < params.ny; ++i) {
       for(int j = 0; j < params.nx; ++j) {
         //printf("%f %f %d ", cells[i*params.nx + j].speeds[0], cells[i*params.nx + j].speeds[1], obstacles[i*params.nx + j]);
         for(int z = 0; z < NSPEEDS; ++z) {
           cells[i*params.nx + j].speeds[z] = -3;
         }
         obstacles[i*params.nx + j] = -3;
-      }
+      }*/
       //printf("\n\n");
-    }
+    //}
     test_run("TEST_intermediate_vals.txt", params.nx, params.ny, cells, obstacles);
   }
   //params.maxIters = 0;
@@ -388,7 +396,7 @@ int main(int argc, char* argv[])
       }
     }
     for(int i = 0; i < process_params.maxIters; ++i) {
-      av_vels[i] /= size;
+      av_vels[i] /= flow_cells;
     }
   } else {
     //send final values
@@ -811,7 +819,7 @@ double av_velocity(const t_param params, t_speed* cells, int* obstacles)
     }
   }
 
-  return tot_u / (double)tot_cells;
+  return tot_u;
 }
 
 void initialise_params_from_file(const char* paramfile, t_param* params) {
