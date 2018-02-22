@@ -86,7 +86,7 @@ typedef struct
 /* load params, allocate memory, load obstacles & initialise fluid particle densities */
 int initialise(const char* paramfile, const char* obstaclefile,
                t_param* params, t_speed** cells_ptr, t_speed** tmp_cells_ptr,
-               int** obstacles_ptr, float** av_vels_ptr);
+               int** obstacles_ptr);
 
 /*
 ** The main calculation methods.
@@ -225,7 +225,7 @@ int main(int argc, char* argv[])
 
   if(rank == 0) {
     /* initialise our data structures and load values from file */
-    initialise(paramfile, obstaclefile, &params, &cells, &tmp_cells, &obstacles, &av_vels);
+    initialise(paramfile, obstaclefile, &params, &cells, &tmp_cells, &obstacles);
     test_run("TEST_initial_vals.txt", params.nx, params.ny, cells, obstacles);
     //fill in process grid for master process
     for(int i = 0; i < process_params.ny; ++i) {
@@ -295,6 +295,7 @@ int main(int argc, char* argv[])
   // start work
   for (int tt = 0; tt < params.maxIters; tt++)
   {
+    if(rank == 0 && tt % 100 == 0) printf("iteration: %d\n", tt);
     //exchange halos
     int left = (rank == 0) ? (rank + size - 1) : (rank - 1);
     int right = (rank + 1) % size;
@@ -343,8 +344,8 @@ int main(int argc, char* argv[])
     }
 
     //now do computations
-    timestep(params, cells, tmp_cells, obstacles);
-    av_vels[tt] = av_velocity(params, cells, obstacles);
+    timestep(process_params, process_cells, process_tmp_cells, process_obstacles);
+    av_vels[tt] = av_velocity(process_params, process_cells, process_obstacles);
 #ifdef DEBUG
     printf("==timestep: %d==\n", tt);
     printf("av velocity: %.12E\n", av_vels[tt]);
