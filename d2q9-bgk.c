@@ -98,21 +98,21 @@ int accelerate_flow(const t_param params, t_speed* cells, int* obstacles);
 int propagate(const t_param params, t_speed* cells, t_speed* tmp_cells);
 int rebound(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles);
 int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles);
-int write_values(const t_param params, t_speed* cells, int* obstacles, float* av_vels);
+int write_values(const t_param params, t_speed* cells, int* obstacles, double* av_vels);
 int calc_ncols_from_rank(int rank, int size, int nx);
 void initialise_params_from_file(const char* paramfile, t_param* params);
 void test_run(const char* output_file, int nx, int ny, t_speed *cells, int *obstacles);
 
 /* finalise, including freeing up allocated memory */
 int finalise(const t_param* params, t_speed** cells_ptr, t_speed** tmp_cells_ptr,
-             int** obstacles_ptr, float** av_vels_ptr);
+             int** obstacles_ptr, double** av_vels_ptr);
 
 /* Sum all the densities in the grid.
 ** The total should remain constant from one timestep to the next. */
 float total_density(const t_param params, t_speed* cells);
 
 /* compute average velocity */
-float av_velocity(const t_param params, t_speed* cells, int* obstacles);
+double av_velocity(const t_param params, t_speed* cells, int* obstacles);
 
 /* calculate Reynolds number */
 float calc_reynolds(const t_param params, t_speed* cells, int* obstacles);
@@ -388,7 +388,7 @@ int main(int argc, char* argv[])
 
     //get av_vels from processes
     for(int i = 1; i < size; ++i) {
-      MPI_Recv(recvbuf_av_vels, process_params.maxIters, MPI_FLOAT, i, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Recv(recvbuf_av_vels, process_params.maxIters, MPI_DOUBLE, i, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
       for(int j = 0; j < process_params.maxIters; ++j) {
         av_vels[j] += recvbuf_av_vels[j];
       }
@@ -418,7 +418,7 @@ int main(int argc, char* argv[])
     for(int i = 0; i < process_params.maxIters; ++i) {
       sendbuf_av_vels[i] = av_vels[i];
     }
-    MPI_Ssend(sendbuf_av_vels, process_params.maxIters, MPI_FLOAT, 0, 2, MPI_COMM_WORLD);
+    MPI_Ssend(sendbuf_av_vels, process_params.maxIters, MPI_DOUBLE, 0, 2, MPI_COMM_WORLD);
     printf("tst8\n");
   }
 
@@ -955,7 +955,7 @@ int initialise(const char* paramfile, const char* obstaclefile,
 }
 
 int finalise(const t_param* params, t_speed** cells_ptr, t_speed** tmp_cells_ptr,
-             int** obstacles_ptr, float** av_vels_ptr)
+             int** obstacles_ptr, double** av_vels_ptr)
 {
   /*
   ** free up allocated memory
@@ -1001,7 +1001,7 @@ float total_density(const t_param params, t_speed* cells)
   return total;
 }
 
-int write_values(const t_param params, t_speed* cells, int* obstacles, float* av_vels)
+int write_values(const t_param params, t_speed* cells, int* obstacles, double* av_vels)
 {
   FILE* fp;                     /* file pointer */
   const float c_sq = 1.f / 3.f; /* sq. of speed of sound */
