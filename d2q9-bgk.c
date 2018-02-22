@@ -103,6 +103,7 @@ int calc_ncols_from_rank(int rank, int size, int nx);
 void initialise_params_from_file(const char* paramfile, t_param* params);
 void test_run(const char* output_file, int nx, int ny, t_speed *cells, int *obstacles);
 int test_files(const char* file1, const char* file2, int nx, int ny, t_speed *cells, int *obstacles);
+void test_vels(const char* output_file, double *vels, int steps);
 
 /* finalise, including freeing up allocated memory */
 int finalise(const t_param* params, t_speed** cells_ptr, t_speed** tmp_cells_ptr,
@@ -396,8 +397,10 @@ int main(int argc, char* argv[])
       }
     }
     for(int i = 0; i < process_params.maxIters; ++i) {
-      av_vels[i] /= flow_cells;
+      av_vels[i] /= (double) flow_cells;
     }
+    printf("FLOW CELLS: %d\n", (int)flow_cells);
+    test_vels("velocities.txt", av_vels, process_params.maxIters);
   } else {
     //send final values
     for(int j = 1; j < process_params.nx-1; ++j) {
@@ -430,13 +433,13 @@ int main(int argc, char* argv[])
     } else {
       printf("NOT VALID\n");
     }*/
-    printf("FINAL VALS:\n");
+    /*printf("FINAL VALS:\n");
     for(int i = 0; i < 5; ++i) {
       for(int j = 1; j < 5; ++j) {
         printf("%f %f %d ", cells[i*params.nx + j].speeds[0], cells[i*params.nx + j].speeds[1], obstacles[i*params.nx + j]);
       }
       printf("\n\n");
-    }
+    }*/
   }
   //DEBUG END
 
@@ -578,6 +581,16 @@ int rebound(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obsta
   }
 
   return EXIT_SUCCESS;
+}
+
+void test_vels(const char* output_file, double *vels, int steps) {
+  FILE* fp = fopen(output_file, "w");
+  for(int i = 0; i < steps; ++i) {
+    double vel = vels[i];
+    fprintf(fp, "%.12lf\n", vel);
+  }
+
+  fclose(fp);
 }
 
 int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles)
