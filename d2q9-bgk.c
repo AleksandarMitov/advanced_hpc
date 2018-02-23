@@ -102,6 +102,8 @@ int write_values(const t_param params, t_speed* cells, int* obstacles, double* a
 int calc_ncols_from_rank(int rank, int size, int nx);
 void initialise_params_from_file(const char* paramfile, t_param* params);
 void test_run(const char* output_file, int nx, int ny, t_speed *cells, int *obstacles);
+int test_files(const char* file1, const char* file2, int nx, int ny, t_speed *cells, int *obstacles);
+void test_vels(const char* output_file, double *vels, int steps);
 
 /* finalise, including freeing up allocated memory */
 int finalise(const t_param* params, t_speed** cells_ptr, t_speed** tmp_cells_ptr,
@@ -139,6 +141,7 @@ int main(int argc, char* argv[])
   double tic, toc;              /* floating point numbers to calculate elapsed wallclock time */
   double usrtim;                /* floating point number to record elapsed user CPU time */
   double systim;                /* floating point number to record elapsed system CPU time */
+  unsigned long long int flow_cells = 0; // number of cells without obstacles
 
   //MPI related
   int rank;               /* 'rank' of process among it's cohort */
@@ -221,11 +224,16 @@ int main(int argc, char* argv[])
   double* sendbuf_av_vels = (double*)malloc(sizeof(double) * process_params.maxIters);
   double* recvbuf_av_vels = (double*)malloc(sizeof(double) * process_params.maxIters);
 
-  printf("test1\n");
-
   if(rank == 0) {
     /* initialise our data structures and load values from file */
     initialise(paramfile, obstaclefile, &params, &cells, &tmp_cells, &obstacles);
+    for(int i = 0; i < params.ny; ++i) {
+      for(int j = 0; j < params.nx; ++j) {
+        if(!obstacles[i*params.nx + j]) {
+          ++flow_cells;
+        }
+      }
+    }
     test_run("TEST_initial_vals.txt", params.nx, params.ny, cells, obstacles);
     //fill in process grid for master process
     for(int i = 0; i < process_params.ny; ++i) {
@@ -254,10 +262,9 @@ int main(int argc, char* argv[])
       }
     }
   } else {
-    printf("TEST 1.1!\n");
     //receive initial values
     for(int j = 1; j < process_params.nx-1; ++j) {
-      printf("rank %d waiting to receive its col %d\n", rank, j);
+      //printf("rank %d waiting to receive its col %d\n", rank, j);
       MPI_Recv(recvbuf_cells, process_params.ny*NSPEEDS, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
       for(int i = 0; i < process_params.ny; ++i) {
         t_speed speeds;
@@ -272,30 +279,28 @@ int main(int argc, char* argv[])
       }
     }
   }
-  printf("test2\n");
   if(rank == 0) {
     //DEBUG start
-    for(int i = 0; i < params.ny; ++i) {
+    /*for(int i = 0; i < params.ny; ++i) {
       for(int j = 0; j < params.nx; ++j) {
         //printf("%f %f %d ", cells[i*params.nx + j].speeds[0], cells[i*params.nx + j].speeds[1], obstacles[i*params.nx + j]);
         for(int z = 0; z < NSPEEDS; ++z) {
           cells[i*params.nx + j].speeds[z] = -3;
         }
         obstacles[i*params.nx + j] = -3;
-      }
+      }*/
       //printf("\n\n");
-    }
+    //}
     test_run("TEST_intermediate_vals.txt", params.nx, params.ny, cells, obstacles);
   }
   //params.maxIters = 0;
-  printf("test3\n");
   //DEBUG END
 
 
   // start work
   for (int tt = 0; tt < params.maxIters; tt++)
   {
-    if(rank == 0 && tt % 100 == 0) printf("iteration: %d\n", tt);
+    if(rank == 0 && tt % 500 == 0) printf("iteration: %d\n", tt);
     //exchange halos
     int left = (rank == 0) ? (rank + size - 1) : (rank - 1);
     int right = (rank + 1) % size;
@@ -353,7 +358,6 @@ int main(int argc, char* argv[])
 #endif
   }
 
-  printf("test4\n");
   //receive values in master
   if(rank == 0) {
     for(int i = 0; i < process_params.ny; ++i) {
@@ -364,7 +368,6 @@ int main(int argc, char* argv[])
       }
     }
 
-    printf("test5\n");
 
     //get other processes' grids
     for(int i = 1; i < size; ++i) {
@@ -394,11 +397,11 @@ int main(int argc, char* argv[])
       }
     }
     for(int i = 0; i < process_params.maxIters; ++i) {
-      av_vels[i] /= size;
+      av_vels[i] /= (double) flow_cells;
     }
-    printf("test6\n");
+    printf("FLOW CELLS: %d\n", (int)flow_cells);
+    test_vels("velocities.txt", av_vels, process_params.maxIters);
   } else {
-    printf("test7\n");
     //send final values
     for(int j = 1; j < process_params.nx-1; ++j) {
       for(int i = 0; i < process_params.ny; ++i) {
@@ -419,19 +422,24 @@ int main(int argc, char* argv[])
       sendbuf_av_vels[i] = av_vels[i];
     }
     MPI_Ssend(sendbuf_av_vels, process_params.maxIters, MPI_DOUBLE, 0, 2, MPI_COMM_WORLD);
-    printf("tst8\n");
   }
 
   //DEBUG start
   if(rank == 0) {
     test_run("TEST_final_vals.txt", params.nx, params.ny, cells, obstacles);
-    printf("FINAL VALS:\n");
+    /*int valid = test_files("TEST_initial_vals.txt", "TEST_final_vals.txt", params.nx, params.ny, cells, obstacles);
+    if(valid == 1) {
+      printf("VALID\n");
+    } else {
+      printf("NOT VALID\n");
+    }*/
+    /*printf("FINAL VALS:\n");
     for(int i = 0; i < 5; ++i) {
       for(int j = 1; j < 5; ++j) {
         printf("%f %f %d ", cells[i*params.nx + j].speeds[0], cells[i*params.nx + j].speeds[1], obstacles[i*params.nx + j]);
       }
       printf("\n\n");
-    }
+    }*/
   }
   //DEBUG END
 
@@ -575,6 +583,16 @@ int rebound(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obsta
   return EXIT_SUCCESS;
 }
 
+void test_vels(const char* output_file, double *vels, int steps) {
+  FILE* fp = fopen(output_file, "w");
+  for(int i = 0; i < steps; ++i) {
+    double vel = vels[i];
+    fprintf(fp, "%.12lf\n", vel);
+  }
+
+  fclose(fp);
+}
+
 int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles)
 {
   const float c_sq = 1.f / 3.f; /* square of speed of sound */
@@ -678,6 +696,65 @@ int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obs
   return EXIT_SUCCESS;
 }
 
+int test_files(const char* file1, const char* file2, int nx, int ny, t_speed *cells, int *obstacles) {
+  FILE *fp1 = fopen(file1, "r");
+  FILE *fp2 = fopen(file2, "r");
+
+  if (fp1 == NULL)
+  {
+    printf("could not open input parameter file: %s", file1);
+    return 0;
+  }
+  if (fp2 == NULL)
+  {
+    printf("could not open input parameter file: %s", file2);
+    return 0;
+  }
+
+  for(int i = 0; i < ny; ++i) {
+    for(int j = 0; j < nx; ++j) {
+      for(int z = 0; z < NSPEEDS; ++z) {
+
+        float f1, f2;
+        int r1 = fscanf(fp1, "%f", &f1);
+        int r2 = fscanf(fp2, "%f", &f2);
+        if(r1 == 0 || r2 == 0) {
+          printf("could not parse nums\n");
+          return 0;
+        }
+        if(f1 != f2) {
+          printf("DIFFERENT OBS VALS %f  %f\n", f1, f2);
+          return 0;
+          //die(message, __LINE__, __FILE__);
+        }
+      }
+
+    }
+  }
+
+
+  for(int i = 0; i < ny; ++i) {
+    for(int j = 0; j < nx; ++j) {
+      int f1, f2;
+      int r1 = fscanf(fp1, "%d", &f1);
+      int r2 = fscanf(fp2, "%d", &f2);
+      if(r1 == 0 || r2 == 0) {
+        printf("could not parse nums\n");
+        return 0;
+      }
+      if(f1 != f2) {
+        printf("DIFFERENT OBS VALS %d  %d\n", f1, f2);
+        return 0;
+        //die(message, __LINE__, __FILE__);
+      }
+    }
+  }
+
+  fclose(fp1);
+  fclose(fp2);
+  return 1;
+}
+
 void test_run(const char* output_file, int nx, int ny, t_speed *cells, int *obstacles) {
   FILE* fp = fopen(output_file, "w");
   char message[1024];
@@ -755,7 +832,7 @@ double av_velocity(const t_param params, t_speed* cells, int* obstacles)
     }
   }
 
-  return tot_u / (double)tot_cells;
+  return tot_u;
 }
 
 void initialise_params_from_file(const char* paramfile, t_param* params) {
