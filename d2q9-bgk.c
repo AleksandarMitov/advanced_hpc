@@ -104,6 +104,7 @@ void initialise_params_from_file(const char* paramfile, t_param* params);
 void test_run(const char* output_file, int nx, int ny, t_speed *cells, int *obstacles);
 int test_files(const char* file1, const char* file2, int nx, int ny, t_speed *cells, int *obstacles);
 void test_vels(const char* output_file, double *vels, int steps);
+void output_state(const char* output_file, int step, t_speed *cells, int *obstacles, int nx, int ny);
 
 /* finalise, including freeing up allocated memory */
 int finalise(const t_param* params, t_speed** cells_ptr, t_speed** tmp_cells_ptr,
@@ -203,7 +204,7 @@ int main(int argc, char* argv[])
   printf("RANK: %d\n", rank);
   printf("BYTES: %d %d %d %d\n\n\n", (int)sizeof(t_speed), process_params.ny, process_params.nx, sss);
   av_vels = (double*)malloc(sizeof(double) * params.maxIters);
-  t_speed *process_cells = (t_speed*)malloc(sizeof(t_speed) * (process_params.ny * process_params.nx));
+  t_speed *process_cells = (t_speed*)calloc((process_params.ny * process_params.nx), sizeof(t_speed));
 
   if (process_cells == NULL) die("cannot allocate memory for cells", __LINE__, __FILE__);
 
@@ -213,7 +214,7 @@ int main(int argc, char* argv[])
   if (process_tmp_cells == NULL) die("cannot allocate memory for tmp_cells", __LINE__, __FILE__);
 
   /* the map of obstacles */
-  int *process_obstacles = malloc(sizeof(int) * (process_params.ny * process_params.nx));
+  int *process_obstacles = calloc((process_params.ny * process_params.nx), sizeof(int));
 
   if (process_obstacles == NULL) die("cannot allocate column memory for obstacles", __LINE__, __FILE__);
 
@@ -227,8 +228,13 @@ int main(int argc, char* argv[])
   if(rank == 0) {
     /* initialise our data structures and load values from file */
     initialise(paramfile, obstaclefile, &params, &cells, &tmp_cells, &obstacles);
+    float c = 1;
     for(int i = 0; i < params.ny; ++i) {
       for(int j = 0; j < params.nx; ++j) {
+        for(int z = 0; z < 9; ++z) {
+          //cells[i*params.nx + j].speeds[z] = c;
+        }
+        ++c;
         if(!obstacles[i*params.nx + j]) {
           ++flow_cells;
         }
@@ -236,7 +242,9 @@ int main(int argc, char* argv[])
     }
     test_run("TEST_initial_vals.txt", params.nx, params.ny, cells, obstacles);
     //fill in process grid for master process
+
     for(int i = 0; i < process_params.ny; ++i) {
+      printf("NX IS %d\n", process_params.nx);
       for(int j = 1; j < process_params.nx-1; ++j) {
         process_cells[i*(process_params.nx) + j] = cells[i*params.nx + j - 1]; // account for halo exchange left col with -1
         process_tmp_cells[i*(process_params.nx) + j] = tmp_cells[i*params.nx + j - 1];
@@ -298,14 +306,24 @@ int main(int argc, char* argv[])
 
 
   // start work
+  double initial_vel = av_velocity(process_params, process_cells, process_obstacles);
+  printf("INITIAL VEOCITY: %.12f\n", (float)initial_vel);
+  printf("flow %d\n", (int)flow_cells);
+  //params.maxIters = 0;
+  char file_name[1024];
+  sprintf(file_name, "state_size_%d_proc_%d.txt", size, rank);
+  FILE *fp = fopen(file_name, "w");
+  fclose(fp);
   for (int tt = 0; tt < params.maxIters; tt++)
   {
+    //output_state(file_name, tt, process_cells, process_obstacles, process_params.nx, process_params.ny);
     if(rank == 0 && tt % 500 == 0) printf("iteration: %d\n", tt);
     //exchange halos
     int left = (rank == 0) ? (rank + size - 1) : (rank - 1);
     int right = (rank + 1) % size;
     //send to the left, receive from right
     //fill with left col
+    //printf("LEFT %d, RIGHT %d\n", left, right);
     for(int i = 0; i < process_params.ny; ++i) {
       for(int z = 0; z < NSPEEDS; ++z) {
         sendbuf_cells[i*NSPEEDS + z] = process_cells[i*process_params.nx + 1].speeds[z];
@@ -348,8 +366,12 @@ int main(int argc, char* argv[])
       process_obstacles[i*process_params.nx] = recvbuf_obstacles[i];
     }
 
+    //output_state(file_name, tt, process_cells, process_obstacles, process_params.nx, process_params.ny);
+
     //now do computations
     timestep(process_params, process_cells, process_tmp_cells, process_obstacles);
+    //initial_vel = av_velocity(process_params, process_cells, process_obstacles);
+    //printf("INITIAL VEOCITY: %.12f\n", (float)initial_vel);
     av_vels[tt] = av_velocity(process_params, process_cells, process_obstacles);
 #ifdef DEBUG
     printf("==timestep: %d==\n", tt);
@@ -390,17 +412,23 @@ int main(int argc, char* argv[])
     }
 
     //get av_vels from processes
+    printf("MAX ITERS: %d\n", process_params.maxIters);
     for(int i = 1; i < size; ++i) {
+      for(int i = 0; i < process_params.maxIters; ++i) {
+        recvbuf_av_vels[i] = 999;
+      }
       MPI_Recv(recvbuf_av_vels, process_params.maxIters, MPI_DOUBLE, i, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
       for(int j = 0; j < process_params.maxIters; ++j) {
         av_vels[j] += recvbuf_av_vels[j];
       }
     }
+
     for(int i = 0; i < process_params.maxIters; ++i) {
-      av_vels[i] /= (double) flow_cells;
+      av_vels[i] /= (double) flow_cells*100;
     }
+
     printf("FLOW CELLS: %d\n", (int)flow_cells);
-    test_vels("velocities.txt", av_vels, process_params.maxIters);
+    test_vels("velocities_tot_u.txt", av_vels, process_params.maxIters);
   } else {
     //send final values
     for(int j = 1; j < process_params.nx-1; ++j) {
@@ -427,6 +455,7 @@ int main(int argc, char* argv[])
   //DEBUG start
   if(rank == 0) {
     test_run("TEST_final_vals.txt", params.nx, params.ny, cells, obstacles);
+    output_state(file_name, 999, cells, obstacles, params.nx, params.ny);
     /*int valid = test_files("TEST_initial_vals.txt", "TEST_final_vals.txt", params.nx, params.ny, cells, obstacles);
     if(valid == 1) {
       printf("VALID\n");
@@ -590,6 +619,33 @@ void test_vels(const char* output_file, double *vels, int steps) {
     fprintf(fp, "%.12lf\n", vel);
   }
 
+  fclose(fp);
+}
+
+void output_state(const char* output_file, int step, t_speed *cells, int *obstacles, int nx, int ny) {
+  FILE* fp = fopen(output_file, "a");
+  if (fp == NULL)
+  {
+    printf("could not open input parameter file: %s", output_file);
+    return;
+  }
+  fprintf(fp, "Step %d:\n", step);
+  for(int i = 0; i < ny; ++i) {
+    for(int j = 0; j < nx; ++j) {
+      for(int z = 0; z < 9; ++z) {
+        fprintf(fp, "%f ", cells[i*nx + j].speeds[z]);
+      }
+      fprintf(fp, "\n");
+    }
+    fprintf(fp, "\n");
+  }
+  for(int i = 0; i < ny; ++i) {
+    for(int j = 0; j < nx; ++j) {
+      fprintf(fp, "%d ", obstacles[i*nx + j]);
+    }
+    fprintf(fp, "\n");
+  }
+  fprintf(fp, "\n\n");
   fclose(fp);
 }
 
@@ -793,6 +849,8 @@ double av_velocity(const t_param params, t_speed* cells, int* obstacles)
   tot_u = 0.f;
 
   /* loop over all non-blocked cells */
+  int skipped = 0;
+  //printf("START PRINTING VELOCITIES:\n");
   for (int jj = 0; jj < params.ny; jj++)
   {
     for (int ii = 1; ii < params.nx-1; ii++)
@@ -801,7 +859,7 @@ double av_velocity(const t_param params, t_speed* cells, int* obstacles)
       if (!obstacles[ii + jj*params.nx])
       {
         /* local density total */
-        double local_density = 0.f;
+        float local_density = 0.f;
 
         for (int kk = 0; kk < NSPEEDS; kk++)
         {
@@ -825,12 +883,19 @@ double av_velocity(const t_param params, t_speed* cells, int* obstacles)
                          + cells[ii + jj*params.nx].speeds[8]))
                      / local_density;
         /* accumulate the norm of x- and y- velocity components */
-        tot_u += sqrtf((u_x * u_x) + (u_y * u_y));
+        //double to_add = cells[ii + jj*params.nx].speeds[1];
+        //u_x + u_y;
+        //printf("ii: %d, jj: %d, val: %f\n", ii, jj, to_add);
+        tot_u += sqrtf(10000*((u_x * u_x) + (u_y * u_y)));
+        //tot_u += to_add;
         /* increase counter of inspected cells */
         ++tot_cells;
-      }
+      } else ++skipped;
     }
+    //printf("skipped: %d\n", skipped);
   }
+  //printf("DONE PRINTING VELOCITIES, total: %f\n", tot_u);
+  //printf("total cells: %d\n", (int) tot_cells);
 
   return tot_u;
 }

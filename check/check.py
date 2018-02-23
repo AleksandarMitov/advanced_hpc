@@ -103,6 +103,12 @@ def print_diffs(format_strings, format_dict):
     for s in format_strings:
         print s.format(**format_dict)
 
+diff = av_vels_ref - av_vels_sim
+diff_pcnt = 100.0*(diff/(av_vels_ref - diff))
+for idx, p in enumerate(diff_pcnt):
+    #print ("index: {}, value: {}%".format(idx, p))
+    pass
+
 av_vels_diffs = get_diff_values(av_vels_ref, av_vels_sim)
 av_vels_strings = [
     "Total difference in av_vels : {total:.12E}",
@@ -133,6 +139,7 @@ print
 # Find out if either of them failed
 final_state_failed = (not np.isfinite(final_state_diffs["max_diff_pcnt"])) or (np.abs(final_state_diffs["max_diff_pcnt"]) > parsed_args.tolerance[0])
 av_vels_failed = (not np.isfinite(av_vels_diffs["max_diff_pcnt"])) or (np.abs(av_vels_diffs["max_diff_pcnt"]) > parsed_args.tolerance[0])
+
 
 if final_state_failed:
     print "final state failed check"
