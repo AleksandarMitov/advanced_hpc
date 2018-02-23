@@ -529,9 +529,9 @@ int accelerate_flow(const t_param params, t_speed* cells, int* obstacles)
   float w2 = params.density * params.accel / 36.f;
 
   /* modify the 2nd row of the grid */
-  int jj = params.ny - 2;
+  int jj = params.ny - 2 -1; // acount for halo row with -1
 
-  for (int ii = 1; ii < params.nx-1; ii++)
+  for (int ii = 0; ii < params.nx; ii++)
   {
     /* if the cell is not occupied and
     ** we don't send a negative density */
@@ -557,9 +557,9 @@ int accelerate_flow(const t_param params, t_speed* cells, int* obstacles)
 int propagate(const t_param params, t_speed* cells, t_speed* tmp_cells)
 {
   /* loop over _all_ cells */
-  for (int jj = 0; jj < params.ny; jj++)
+  for (int jj = 1; jj < params.ny-1; jj++)
   {
-    for (int ii = 1; ii < params.nx-1; ii++)
+    for (int ii = 0; ii < params.nx; ii++)
     {
       /* determine indices of axis-direction neighbours
       ** respecting periodic boundary conditions (wrap around) */
@@ -588,9 +588,9 @@ int propagate(const t_param params, t_speed* cells, t_speed* tmp_cells)
 int rebound(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles)
 {
   /* loop over the cells in the grid */
-  for (int jj = 0; jj < params.ny; jj++)
+  for (int jj = 1; jj < params.ny-1; jj++)
   {
-    for (int ii = 1; ii < params.nx-1; ii++)
+    for (int ii = 0; ii < params.nx; ii++)
     {
       /* if the cell contains an obstacle */
       if (obstacles[jj*params.nx + ii])
@@ -660,9 +660,9 @@ int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obs
   ** NB the collision step is called after
   ** the propagate step and so values of interest
   ** are in the scratch-space grid */
-  for (int jj = 0; jj < params.ny; jj++)
+  for (int jj = 1; jj < params.ny-1; jj++)
   {
-    for (int ii = 1; ii < params.nx-1; ii++)
+    for (int ii = 0; ii < params.nx; ii++)
     {
       /* don't consider occupied cells */
       if (!obstacles[ii + jj*params.nx])
@@ -851,9 +851,9 @@ double av_velocity(const t_param params, t_speed* cells, int* obstacles)
   /* loop over all non-blocked cells */
   int skipped = 0;
   //printf("START PRINTING VELOCITIES:\n");
-  for (int jj = 0; jj < params.ny; jj++)
+  for (int jj = 1; jj < params.ny-1; jj++)
   {
-    for (int ii = 1; ii < params.nx-1; ii++)
+    for (int ii = 0; ii < params.nx; ii++)
     {
       /* ignore occupied cells */
       if (!obstacles[ii + jj*params.nx])
