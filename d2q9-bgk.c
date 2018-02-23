@@ -194,9 +194,9 @@ int main(int argc, char* argv[])
 
   //MPI process subgrid
   initialise_params_from_file(paramfile, &params);
-  int process_cols = calc_ncols_from_rank(rank, size, params.nx);
+  int process_rows = calc_ncols_from_rank(rank, size, params.ny);
   t_param  process_params = params;  // copy values
-  process_params.nx = process_cols + 2; //add 2 for halo exchanges
+  process_params.ny = process_rows + 2; //add 2 for halo exchanges
 
   /* main grid */
   int sss = sizeof(t_speed) * (params.ny * params.nx);
@@ -218,10 +218,10 @@ int main(int argc, char* argv[])
 
   if (process_obstacles == NULL) die("cannot allocate column memory for obstacles", __LINE__, __FILE__);
 
-  float* sendbuf_cells = (float*)malloc(sizeof(float) * NSPEEDS * process_params.ny);
-  int* sendbuf_obstacles = (int*)malloc(sizeof(int) * process_params.ny);
-  float* recvbuf_cells = (float*)malloc(sizeof(float) * NSPEEDS * process_params.ny);
-  int* recvbuf_obstacles = (int*)malloc(sizeof(int) * process_params.ny);
+  float* sendbuf_cells = (float*)malloc(sizeof(float) * NSPEEDS * process_params.nx);
+  int* sendbuf_obstacles = (int*)malloc(sizeof(int) * process_params.nx);
+  float* recvbuf_cells = (float*)malloc(sizeof(float) * NSPEEDS * process_params.nx);
+  int* recvbuf_obstacles = (int*)malloc(sizeof(int) * process_params.nx);
   double* sendbuf_av_vels = (double*)malloc(sizeof(double) * process_params.maxIters);
   double* recvbuf_av_vels = (double*)malloc(sizeof(double) * process_params.maxIters);
 
@@ -243,47 +243,47 @@ int main(int argc, char* argv[])
     test_run("TEST_initial_vals.txt", params.nx, params.ny, cells, obstacles);
     //fill in process grid for master process
 
-    for(int i = 0; i < process_params.ny; ++i) {
+    for(int i = 1; i < process_params.ny-1; ++i) {
       printf("NX IS %d\n", process_params.nx);
-      for(int j = 1; j < process_params.nx-1; ++j) {
-        process_cells[i*(process_params.nx) + j] = cells[i*params.nx + j - 1]; // account for halo exchange left col with -1
-        process_tmp_cells[i*(process_params.nx) + j] = tmp_cells[i*params.nx + j - 1];
-        process_obstacles[i*(process_params.nx) + j] = obstacles[i*params.nx + j - 1];
+      for(int j = 0; j < process_params.nx; ++j) {
+        process_cells[i*(process_params.nx) + j] = cells[(i-1)*params.nx + j]; // account for halo exchange top row with -1
+        process_tmp_cells[i*(process_params.nx) + j] = tmp_cells[(i-1)*params.nx + j];
+        process_obstacles[i*(process_params.nx) + j] = obstacles[(i-1)*params.nx + j];
       }
     }
 
     //fill other processes' grids
     for(int i = 1; i < size; ++i) {
-      int i_process_cols = calc_ncols_from_rank(i, size, params.nx);
-      int cols_per_rank = params.nx / size;
-      for(int j = i*cols_per_rank; j < i*cols_per_rank + i_process_cols; ++j) {
-        for(int k = 0; k < process_params.ny; ++k) {
+      int i_process_rows = calc_ncols_from_rank(i, size, params.ny);
+      int rows_per_rank = params.ny / size;
+      for(int j = i*rows_per_rank; j < i*rows_per_rank + i_process_rows; ++j) {
+        for(int k = 0; k < process_params.nx; ++k) {
           for(int z = 0; z < NSPEEDS; ++z) {
-            sendbuf_cells[k*NSPEEDS + z] = cells[k*params.nx + j].speeds[z];
+            sendbuf_cells[k*NSPEEDS + z] = cells[j*params.nx + k].speeds[z];
           }
         }
-        MPI_Ssend(sendbuf_cells, process_params.ny*NSPEEDS, MPI_FLOAT, i, 0, MPI_COMM_WORLD);
-        for(int k = 0; k < process_params.ny; ++k) {
-          sendbuf_obstacles[k] = obstacles[k*params.nx + j];
+        MPI_Ssend(sendbuf_cells, process_params.nx*NSPEEDS, MPI_FLOAT, i, 0, MPI_COMM_WORLD);
+        for(int k = 0; k < process_params.nx; ++k) {
+          sendbuf_obstacles[k] = obstacles[j*params.nx + k];
         }
-        MPI_Ssend(sendbuf_obstacles, process_params.ny, MPI_INT, i, 1, MPI_COMM_WORLD);
+        MPI_Ssend(sendbuf_obstacles, process_params.nx, MPI_INT, i, 1, MPI_COMM_WORLD);
       }
     }
   } else {
     //receive initial values
-    for(int j = 1; j < process_params.nx-1; ++j) {
+    for(int j = 1; j < process_params.ny-1; ++j) {
       //printf("rank %d waiting to receive its col %d\n", rank, j);
-      MPI_Recv(recvbuf_cells, process_params.ny*NSPEEDS, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      for(int i = 0; i < process_params.ny; ++i) {
+      MPI_Recv(recvbuf_cells, process_params.nx*NSPEEDS, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      for(int i = 0; i < process_params.nx; ++i) {
         t_speed speeds;
         for(int z = 0; z < NSPEEDS; ++z) {
           speeds.speeds[z] = recvbuf_cells[i*NSPEEDS + z];
         }
-        process_cells[i*process_params.nx + j] = speeds;
+        process_cells[j*process_params.nx + i] = speeds;
       }
-      MPI_Recv(recvbuf_obstacles, process_params.ny, MPI_INT, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      for(int i = 0; i < process_params.ny; ++i) {
-        process_obstacles[i*process_params.nx + j] = recvbuf_obstacles[i];
+      MPI_Recv(recvbuf_obstacles, process_params.nx, MPI_INT, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      for(int i = 0; i < process_params.nx; ++i) {
+        process_obstacles[j*process_params.nx + i] = recvbuf_obstacles[i];
       }
     }
   }
@@ -319,51 +319,51 @@ int main(int argc, char* argv[])
     //output_state(file_name, tt, process_cells, process_obstacles, process_params.nx, process_params.ny);
     if(rank == 0 && tt % 500 == 0) printf("iteration: %d\n", tt);
     //exchange halos
-    int left = (rank == 0) ? (rank + size - 1) : (rank - 1);
+    int left = (rank == 0) ? (rank + size - 1) : (rank - 1); // left is bottom, right is top equiv
     int right = (rank + 1) % size;
     //send to the left, receive from right
     //fill with left col
     //printf("LEFT %d, RIGHT %d\n", left, right);
-    for(int i = 0; i < process_params.ny; ++i) {
+    for(int i = 0; i < process_params.nx; ++i) {
       for(int z = 0; z < NSPEEDS; ++z) {
-        sendbuf_cells[i*NSPEEDS + z] = process_cells[i*process_params.nx + 1].speeds[z];
+        sendbuf_cells[i*NSPEEDS + z] = process_cells[1*process_params.nx + i].speeds[z];
       }
-      sendbuf_obstacles[i] = process_obstacles[i*process_params.nx + 1];
+      sendbuf_obstacles[i] = process_obstacles[1*process_params.nx + i];
     }
 
-    MPI_Sendrecv(sendbuf_cells,  process_params.ny*NSPEEDS, MPI_FLOAT, left, 0, recvbuf_cells,
-                process_params.ny*NSPEEDS, MPI_FLOAT, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    MPI_Sendrecv(sendbuf_obstacles,  process_params.ny, MPI_INT, left, 1, recvbuf_obstacles,
-                process_params.ny, MPI_INT, right, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Sendrecv(sendbuf_cells,  process_params.nx*NSPEEDS, MPI_FLOAT, left, 0, recvbuf_cells,
+                process_params.nx*NSPEEDS, MPI_FLOAT, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Sendrecv(sendbuf_obstacles,  process_params.nx, MPI_INT, left, 1, recvbuf_obstacles,
+                process_params.nx, MPI_INT, right, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     //populate right col
-    for(int i = 0; i < process_params.ny; ++i) {
+    for(int i = 0; i < process_params.nx; ++i) {
       t_speed speeds;
       for(int z = 0; z < NSPEEDS; ++z) {
         speeds.speeds[z] = recvbuf_cells[i*NSPEEDS + z];
       }
-      process_cells[i*process_params.nx + process_params.nx -1] = speeds;
-      process_obstacles[i*process_params.nx + process_params.nx -1] = recvbuf_obstacles[i];
+      process_cells[(process_params.ny-1)*process_params.nx + i] = speeds;
+      process_obstacles[(process_params.ny-1)*process_params.nx + i] = recvbuf_obstacles[i];
     }
     //send to right, receive from left
     //fill with right col
-    for(int i = 0; i < process_params.ny; ++i) {
+    for(int i = 0; i < process_params.nx; ++i) {
       for(int z = 0; z < NSPEEDS; ++z) {
-        sendbuf_cells[i*NSPEEDS + z] = process_cells[i*process_params.nx + process_params.nx -2].speeds[z];
+        sendbuf_cells[i*NSPEEDS + z] = process_cells[(process_params.ny-2)*process_params.nx + i].speeds[z];
       }
-      sendbuf_obstacles[i] = process_obstacles[i*process_params.nx + process_params.nx -2];
+      sendbuf_obstacles[i] = process_obstacles[(process_params.ny-2)*process_params.nx + i];
     }
-    MPI_Sendrecv(sendbuf_cells,  process_params.ny*NSPEEDS, MPI_FLOAT, right, 0, recvbuf_cells,
-                process_params.ny*NSPEEDS, MPI_FLOAT, left, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    MPI_Sendrecv(sendbuf_obstacles,  process_params.ny, MPI_INT, right, 1, recvbuf_obstacles,
-                process_params.ny, MPI_INT, left, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Sendrecv(sendbuf_cells,  process_params.nx*NSPEEDS, MPI_FLOAT, right, 0, recvbuf_cells,
+                process_params.nx*NSPEEDS, MPI_FLOAT, left, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Sendrecv(sendbuf_obstacles,  process_params.nx, MPI_INT, right, 1, recvbuf_obstacles,
+                process_params.nx, MPI_INT, left, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     //populate left col
-    for(int i = 0; i < process_params.ny; ++i) {
+    for(int i = 0; i < process_params.nx; ++i) {
       t_speed speeds;
       for(int z = 0; z < NSPEEDS; ++z) {
         speeds.speeds[z] = recvbuf_cells[i*NSPEEDS + z];
       }
-      process_cells[i*process_params.nx] = speeds;
-      process_obstacles[i*process_params.nx] = recvbuf_obstacles[i];
+      process_cells[i] = speeds;
+      process_obstacles[i] = recvbuf_obstacles[i];
     }
 
     //output_state(file_name, tt, process_cells, process_obstacles, process_params.nx, process_params.ny);
@@ -382,31 +382,31 @@ int main(int argc, char* argv[])
 
   //receive values in master
   if(rank == 0) {
-    for(int i = 0; i < process_params.ny; ++i) {
-      for(int j = 1; j < process_params.nx-1; ++j) {
-        cells[i*params.nx + j - 1] = process_cells[i*(process_params.nx) + j]; // account for halo exchange left col with -1
-        tmp_cells[i*params.nx + j - 1] = process_tmp_cells[i*(process_params.nx) + j];
-        obstacles[i*params.nx + j - 1] = process_obstacles[i*(process_params.nx) + j];
+    for(int i = 1; i < process_params.ny-1; ++i) {
+      for(int j = 0; j < process_params.nx; ++j) {
+        cells[(i-1)*params.nx + j] = process_cells[i*(process_params.nx) + j]; // account for halo exchange left col with -1
+        tmp_cells[(i-1)*params.nx + j] = process_tmp_cells[i*(process_params.nx) + j];
+        obstacles[(i-1)*params.nx + j] = process_obstacles[i*(process_params.nx) + j];
       }
     }
 
 
     //get other processes' grids
     for(int i = 1; i < size; ++i) {
-      int i_process_cols = calc_ncols_from_rank(i, size, params.nx);
-      int cols_per_rank = params.nx / size;
-      for(int j = i*cols_per_rank; j < i*cols_per_rank + i_process_cols; ++j) {
-        MPI_Recv(recvbuf_cells, process_params.ny*NSPEEDS, MPI_FLOAT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        for(int k = 0; k < process_params.ny; ++k) {
+      int i_process_rows = calc_ncols_from_rank(i, size, params.ny);
+      int rows_per_rank = params.ny / size;
+      for(int j = i*rows_per_rank; j < i*rows_per_rank + i_process_rows; ++j) {
+        MPI_Recv(recvbuf_cells, process_params.nx*NSPEEDS, MPI_FLOAT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        for(int k = 0; k < process_params.nx; ++k) {
           t_speed speeds;
           for(int z = 0; z < NSPEEDS; ++z) {
             speeds.speeds[z] = recvbuf_cells[k*NSPEEDS + z];
           }
-          cells[k*params.nx + j] = speeds;
+          cells[j*params.nx + k] = speeds;
         }
-        MPI_Recv(recvbuf_obstacles, process_params.ny, MPI_INT, i, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        for(int k = 0; k < process_params.ny; ++k) {
-          obstacles[k*params.nx + j] = recvbuf_obstacles[k];
+        MPI_Recv(recvbuf_obstacles, process_params.nx, MPI_INT, i, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        for(int k = 0; k < process_params.nx; ++k) {
+          obstacles[j*params.nx + k] = recvbuf_obstacles[k];
         }
       }
     }
@@ -431,19 +431,19 @@ int main(int argc, char* argv[])
     test_vels("velocities_tot_u.txt", av_vels, process_params.maxIters);
   } else {
     //send final values
-    for(int j = 1; j < process_params.nx-1; ++j) {
-      for(int i = 0; i < process_params.ny; ++i) {
+    for(int j = 1; j < process_params.ny-1; ++j) {
+      for(int i = 0; i < process_params.nx; ++i) {
         for(int z = 0; z < NSPEEDS; ++z) {
-          sendbuf_cells[i*NSPEEDS + z] = process_cells[i*process_params.nx + j].speeds[z];
+          sendbuf_cells[i*NSPEEDS + z] = process_cells[j*process_params.nx + i].speeds[z];
         }
       }
-      MPI_Ssend(sendbuf_cells, process_params.ny*NSPEEDS, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
+      MPI_Ssend(sendbuf_cells, process_params.nx*NSPEEDS, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
 
-      for(int i = 0; i < process_params.ny; ++i) {
+      for(int i = 0; i < process_params.nx; ++i) {
         //process_obstacles[i*process_params.nx + j + 1] = recvbuf[i];
-        sendbuf_obstacles[i] = process_obstacles[i*process_params.nx + j];
+        sendbuf_obstacles[i] = process_obstacles[j*process_params.nx + i];
       }
-      MPI_Ssend(sendbuf_obstacles, process_params.ny, MPI_INT, 0, 1, MPI_COMM_WORLD);
+      MPI_Ssend(sendbuf_obstacles, process_params.nx, MPI_INT, 0, 1, MPI_COMM_WORLD);
     }
     //send av_vels to master
     for(int i = 0; i < process_params.maxIters; ++i) {
