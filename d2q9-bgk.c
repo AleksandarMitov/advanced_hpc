@@ -149,7 +149,7 @@ int main(int argc, char* argv[])
 
   /* check whether the initialisation was successful */
   MPI_Initialized(&flag);
-  if ( flag != TRUE ) {
+  if ( flag != 1 ) {
     MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
   }
 
@@ -166,6 +166,7 @@ int main(int argc, char* argv[])
 
   /* determine the RANK of the current process [0:SIZE-1] */
   MPI_Comm_rank( MPI_COMM_WORLD, &rank );
+  printf("RANK: %d\n", rank);
 
   /* parse the command line */
   if (argc != 3)
