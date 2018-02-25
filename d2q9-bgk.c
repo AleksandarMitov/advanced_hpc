@@ -148,6 +148,10 @@ int main(int argc, char* argv[])
   t_speed *child_cells;
   t_speed *child_tmp_cells;
   int *child_obstacles;
+  float *sbuffer_cells;
+  float *rbuffer_cells;
+  int *sbuffer_obstacles;
+  int *rbuffer_obstacles;
 
   /* initialise our MPI environment */
   MPI_Init( &argc, &argv );
@@ -188,19 +192,62 @@ int main(int argc, char* argv[])
   int child_cols = calc_ncols_from_rank(rank, size, params.nx);
   t_param child_params;
   initialise_params_from_file(paramfile, &child_params);
-  child_params.nx = child_cols;
+  child_params.nx = child_cols + 2; // add 2 halo cols
   //Initialise child memory
   child_cells = (t_speed*)calloc((child_params.ny * child_params.nx), sizeof(t_speed));
   child_tmp_cells = (t_speed*)calloc((child_params.ny * child_params.nx), sizeof(t_speed));
   child_obstacles = (int*)calloc((child_params.ny * child_params.nx), sizeof(int));
+  sbuffer_cells = (float*) calloc(params.ny * NSPEEDS, sizeof(float));
+  rbuffer_cells = (float*) calloc(params.ny * NSPEEDS, sizeof(float));
+  sbuffer_obstacles = (int *) calloc(params.ny, sizeof(int));
+  rbuffer_obstacles = (int *) calloc(params.ny, sizeof(int));
 
   if(rank == 0 || 1) {
     /* initialise our data structures and load values from file */
     initialise(paramfile, obstaclefile, &params, &cells, &tmp_cells, &obstacles, &av_vels);
 
+    //allocate memory for async send buffs
+    float** send_bufffer_cells = (float**) malloc(size * sizeof(float*));
+    int** send_buffer_obstacles = (int**) malloc(size * sizeof(int*));
+    for(int i = 0; i < size; ++i) {
+      send_bufffer_cells[i] = (float*) malloc(child_params.ny * child_params.nx * NSPEEDS * sizeof(float));
+      send_buffer_obstacles[i] = (int*) malloc(child_params.ny * child_params.nx * sizeof(int));
+    }
+    //Send data to children and itself
+    for(int process = 0; process < size; ++process) {
+      int cols_per_process = params.nx / size;
+      int current_child_cols = calc_ncols_from_rank(process, size, params.nx);
+      for(int col = process*cols_per_process; col < process*cols_per_process + current_child_cols; ++col) {
+        //Fill send buffers
+        for(int row = 0; row < params.ny; ++row) {
+          send_bufffer_obstacles[col*child_params.ny + row] = obstacles[row*params.nx + col];
+          for(int speed = 0; speed < NSPEEDS; ++speed) {
+            send_bufffer_cells[col*child_params.ny*NSPEEDS + row*NSPEEDS + speed] = cells[row*params.nx + col].speeds[speed];
+          }
+        }
+        //Send data
+        MPI_Request send_request;
+        MPI_Isend(send_bufffer_cells[process][col*child_params.ny], params.ny*NSPEEDS, MPI_FLOAT, process, 0, MPI_COMM_WORLD, &send_request);
+        MPI_Isend(send_bufffer_obstacles[process][col*child_params.ny], params.ny, MPI_INT, process, 1, MPI_COMM_WORLD, &send_request);
+      }
+    }
+    // Done sending stuff
   } else {
-
+    //Receive data from master
+    for(int col = 1; col < child_params.nx-1; ++col) {
+      MPI_Recv(rbuffer_cells, child_params.ny*NSPEEDS, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Recv(rbuffer_obstacles, child_params.ny, MPI_INT, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      for(int row = 0; row < child_params.ny; ++row) {
+        child_obstacles[row*child_params.nx + col] = rbuffer_obstacles[row];
+        t_speed speeds;
+        for(int speed = 0; speed < NSPEEDS; ++speed) {
+          speeds.speeds[speed] = rbuffer_cells[row*NSPEEDS + speed];
+        }
+        child_cells[row*child_params.nx + col] = speeds;
+      }
+    }
   }
+  printf("DONE\n");
 
   /* iterate for maxIters timesteps */
   gettimeofday(&timstr, NULL);
@@ -235,11 +282,16 @@ int main(int argc, char* argv[])
     write_values(params, cells, obstacles, av_vels);
     finalise(&params, &cells, &tmp_cells, &obstacles, &av_vels);
   }
+
   /* finialise the MPI enviroment */
   MPI_Finalize();
   free(child_cells);
   free(child_tmp_cells);
   free(child_obstacles);
+  free(sbuffer_cells);
+  free(rbuffer_cells);
+  free(sbuffer_obstacles);
+  free(rbuffer_obstacles);
 
   return EXIT_SUCCESS;
 }
