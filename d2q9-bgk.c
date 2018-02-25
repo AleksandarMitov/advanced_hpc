@@ -118,6 +118,7 @@ float calc_reynolds(const t_param params, t_speed* cells, int* obstacles);
 /* utility functions */
 void die(const char* message, const int line, const char* file);
 void usage(const char* exe);
+int calc_ncols_from_rank(int rank, int size, int nx);
 
 /*
 ** main program:
@@ -184,18 +185,19 @@ int main(int argc, char* argv[])
   }
 
   //Work out child params
-  t_param child_params = initialise_params_from_file(paramfile, &child_params);
   int child_cols = calc_ncols_from_rank(rank, size, params.nx);
+  t_param child_params;
+  initialise_params_from_file(paramfile, &child_params);
   child_params.nx = child_cols;
   //Initialise child memory
   child_cells = (t_speed*)calloc((child_params.ny * child_params.nx), sizeof(t_speed));
   child_tmp_cells = (t_speed*)calloc((child_params.ny * child_params.nx), sizeof(t_speed));
   child_obstacles = (int*)calloc((child_params.ny * child_params.nx), sizeof(int));
 
-  if(rank == 0) {
+  if(rank == 0 || 1) {
     /* initialise our data structures and load values from file */
     initialise(paramfile, obstaclefile, &params, &cells, &tmp_cells, &obstacles, &av_vels);
-    
+
   } else {
 
   }
