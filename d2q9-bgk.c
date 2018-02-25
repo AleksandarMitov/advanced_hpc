@@ -99,6 +99,7 @@ int propagate(const t_param params, t_speed* cells, t_speed* tmp_cells);
 int rebound(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles);
 int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles);
 int write_values(const t_param params, t_speed* cells, int* obstacles, float* av_vels);
+void initialise_params_from_file(const char* paramfile, t_param* params);
 
 /* finalise, including freeing up allocated memory */
 int finalise(const t_param* params, t_speed** cells_ptr, t_speed** tmp_cells_ptr,
@@ -143,6 +144,9 @@ int main(int argc, char* argv[])
   int flag;               /* for checking whether MPI_Init() has been called */
   int strlen;             /* length of a character array */
   char hostname[MPI_MAX_PROCESSOR_NAME];  /* character array to hold hostname running process */
+  t_speed *child_cells;
+  t_speed *child_tmp_cells;
+  int *child_obstacles;
 
   /* initialise our MPI environment */
   MPI_Init( &argc, &argv );
@@ -179,8 +183,22 @@ int main(int argc, char* argv[])
     obstaclefile = argv[2];
   }
 
-  /* initialise our data structures and load values from file */
-  initialise(paramfile, obstaclefile, &params, &cells, &tmp_cells, &obstacles, &av_vels);
+  //Work out child params
+  t_param child_params = initialise_params_from_file(paramfile, &child_params);
+  int child_cols = calc_ncols_from_rank(rank, size, params.nx);
+  child_params.nx = child_cols;
+  //Initialise child memory
+  child_cells = (t_speed*)calloc((child_params.ny * child_params.nx), sizeof(t_speed));
+  child_tmp_cells = (t_speed*)calloc((child_params.ny * child_params.nx), sizeof(t_speed));
+  child_obstacles = (int*)calloc((child_params.ny * child_params.nx), sizeof(int));
+
+  if(rank == 0) {
+    /* initialise our data structures and load values from file */
+    initialise(paramfile, obstaclefile, &params, &cells, &tmp_cells, &obstacles, &av_vels);
+    
+  } else {
+
+  }
 
   /* iterate for maxIters timesteps */
   gettimeofday(&timstr, NULL);
@@ -197,26 +215,91 @@ int main(int argc, char* argv[])
 #endif
   }
 
-  gettimeofday(&timstr, NULL);
-  toc = timstr.tv_sec + (timstr.tv_usec / 1000000.0);
-  getrusage(RUSAGE_SELF, &ru);
-  timstr = ru.ru_utime;
-  usrtim = timstr.tv_sec + (timstr.tv_usec / 1000000.0);
-  timstr = ru.ru_stime;
-  systim = timstr.tv_sec + (timstr.tv_usec / 1000000.0);
+  if(rank == 0) {
+    gettimeofday(&timstr, NULL);
+    toc = timstr.tv_sec + (timstr.tv_usec / 1000000.0);
+    getrusage(RUSAGE_SELF, &ru);
+    timstr = ru.ru_utime;
+    usrtim = timstr.tv_sec + (timstr.tv_usec / 1000000.0);
+    timstr = ru.ru_stime;
+    systim = timstr.tv_sec + (timstr.tv_usec / 1000000.0);
 
-  /* write final values and free memory */
-  printf("==done==\n");
-  printf("Reynolds number:\t\t%.12E\n", calc_reynolds(params, cells, obstacles));
-  printf("Elapsed time:\t\t\t%.6lf (s)\n", toc - tic);
-  printf("Elapsed user CPU time:\t\t%.6lf (s)\n", usrtim);
-  printf("Elapsed system CPU time:\t%.6lf (s)\n", systim);
-  write_values(params, cells, obstacles, av_vels);
-  finalise(&params, &cells, &tmp_cells, &obstacles, &av_vels);
+    /* write final values and free memory */
+    printf("==done==\n");
+    printf("Reynolds number:\t\t%.12E\n", calc_reynolds(params, cells, obstacles));
+    printf("Elapsed time:\t\t\t%.6lf (s)\n", toc - tic);
+    printf("Elapsed user CPU time:\t\t%.6lf (s)\n", usrtim);
+    printf("Elapsed system CPU time:\t%.6lf (s)\n", systim);
+    write_values(params, cells, obstacles, av_vels);
+    finalise(&params, &cells, &tmp_cells, &obstacles, &av_vels);
+  }
   /* finialise the MPI enviroment */
   MPI_Finalize();
+  free(child_cells);
+  free(child_tmp_cells);
+  free(child_obstacles);
 
   return EXIT_SUCCESS;
+}
+
+int calc_ncols_from_rank(int rank, int size, int nx)
+{
+  int ncols;
+
+  ncols = nx / size;       /* integer division */
+  if ((nx % size) != 0) {  /* if there is a remainder */
+    if (rank == size - 1)
+      ncols += nx % size;  /* add remainder to last rank */
+  }
+
+  return ncols;
+}
+
+void initialise_params_from_file(const char* paramfile, t_param* params) {
+  char   message[1024];  /* message buffer */
+  int    retval;         /* to hold return value for checking */
+  FILE* fp;
+
+  /* open the parameter file */
+  fp = fopen(paramfile, "r");
+
+  if (fp == NULL)
+  {
+    sprintf(message, "could not open input parameter file: %s", paramfile);
+    die(message, __LINE__, __FILE__);
+  }
+
+  /* read in the parameter values */
+  retval = fscanf(fp, "%d\n", &(params->nx));
+
+  if (retval != 1) die("could not read param file: nx", __LINE__, __FILE__);
+
+  retval = fscanf(fp, "%d\n", &(params->ny));
+
+  if (retval != 1) die("could not read param file: ny", __LINE__, __FILE__);
+
+  retval = fscanf(fp, "%d\n", &(params->maxIters));
+
+  if (retval != 1) die("could not read param file: maxIters", __LINE__, __FILE__);
+
+  retval = fscanf(fp, "%d\n", &(params->reynolds_dim));
+
+  if (retval != 1) die("could not read param file: reynolds_dim", __LINE__, __FILE__);
+
+  retval = fscanf(fp, "%f\n", &(params->density));
+
+  if (retval != 1) die("could not read param file: density", __LINE__, __FILE__);
+
+  retval = fscanf(fp, "%f\n", &(params->accel));
+
+  if (retval != 1) die("could not read param file: accel", __LINE__, __FILE__);
+
+  retval = fscanf(fp, "%f\n", &(params->omega));
+
+  if (retval != 1) die("could not read param file: omega", __LINE__, __FILE__);
+
+  /* and close up the file */
+  fclose(fp);
 }
 
 int timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles)
