@@ -54,6 +54,7 @@
 #include <math.h>
 #include <time.h>
 #include <sys/time.h>
+#include <mpi.h>
 #include <sys/resource.h>
 
 #define NSPEEDS         9
@@ -136,6 +137,36 @@ int main(int argc, char* argv[])
   double usrtim;                /* floating point number to record elapsed user CPU time */
   double systim;                /* floating point number to record elapsed system CPU time */
 
+  //MPI related
+  int rank;               /* 'rank' of process among it's cohort */
+  int size;               /* size of cohort, i.e. num processes started */
+  int flag;               /* for checking whether MPI_Init() has been called */
+  int strlen;             /* length of a character array */
+  char hostname[MPI_MAX_PROCESSOR_NAME];  /* character array to hold hostname running process */
+
+  /* initialise our MPI environment */
+  MPI_Init( &argc, &argv );
+
+  /* check whether the initialisation was successful */
+  MPI_Initialized(&flag);
+  if ( flag != TRUE ) {
+    MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+  }
+
+  /* determine the hostname */
+  MPI_Get_processor_name(hostname,&strlen);
+
+  /*
+  ** determine the SIZE of the group of processes associated with
+  ** the 'communicator'.  MPI_COMM_WORLD is the default communicator
+  ** consisting of all the processes in the launched MPI 'job'
+  */
+  MPI_Comm_size( MPI_COMM_WORLD, &size );
+  printf("SIZE: %d\n", size);
+
+  /* determine the RANK of the current process [0:SIZE-1] */
+  MPI_Comm_rank( MPI_COMM_WORLD, &rank );
+
   /* parse the command line */
   if (argc != 3)
   {
@@ -181,6 +212,8 @@ int main(int argc, char* argv[])
   printf("Elapsed system CPU time:\t%.6lf (s)\n", systim);
   write_values(params, cells, obstacles, av_vels);
   finalise(&params, &cells, &tmp_cells, &obstacles, &av_vels);
+  /* finialise the MPI enviroment */
+  MPI_Finalize();
 
   return EXIT_SUCCESS;
 }
