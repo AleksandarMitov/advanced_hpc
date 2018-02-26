@@ -149,6 +149,7 @@ int main(int argc, char* argv[])
   t_speed *child_tmp_cells;
   int *child_obstacles;
   float *child_vels;
+  float *rbuffer_vels;
   float *sbuffer_cells;
   float *rbuffer_cells;
   int *sbuffer_obstacles;
@@ -196,6 +197,7 @@ int main(int argc, char* argv[])
   int child_cols = calc_ncols_from_rank(rank, size, params.nx);
   child_params.nx = child_cols + 2; // add 2 halo cols
   //Initialise child memory
+  rbuffer_vels = (float*) calloc(params.maxIters, sizeof(float));
   child_cells = (t_speed*)calloc((child_params.ny * child_params.nx), sizeof(t_speed));
   child_tmp_cells = (t_speed*)calloc((child_params.ny * child_params.nx), sizeof(t_speed));
   child_obstacles = (int*)calloc((child_params.ny * child_params.nx), sizeof(int));
@@ -368,6 +370,30 @@ int main(int argc, char* argv[])
         }
       }
     }
+  }
+
+  //Handle average velocity computations
+  if(rank == 0) {
+    for(int process = 1; process < size; ++process) {
+      MPI_Recv(rbuffer_vels, child_params.maxIters, MPI_FLOAT, process, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      for(int tt = 0; tt < child_params.maxIters; ++tt) {
+        child_vels[tt] += rbuffer_vels[tt];
+      }
+    }
+    //compute average velocity
+    int tot_u = 0;
+    for(int row = 0; row < params.ny; ++row) {
+      for(int col = 0; col < params.nx; ++col) {
+        if(!obstacles[row*params.nx + col]) {
+          ++tot_u;
+        }
+      }
+    }
+    for(int tt = 0; tt < child_params.maxIters; ++tt) {
+      av_vels[tt] = child_vels[tt] / tot_u;
+    }
+  } else {
+    MPI_Send(child_vels, child_params.maxIters, MPI_FLOAT, 0, 2, MPI_COMM_WORLD);
   }
 
   printf("Shit works for process: %d\n", rank);
@@ -714,7 +740,8 @@ float av_velocity(const t_param params, t_speed* cells, int* obstacles)
     }
   }
 
-  return tot_u / (float)tot_cells;
+  //return tot_u / (float)tot_cells;
+  return tot_u;
 }
 
 int initialise(const char* paramfile, const char* obstaclefile,
