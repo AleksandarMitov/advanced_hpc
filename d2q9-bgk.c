@@ -316,6 +316,7 @@ int main(int argc, char* argv[])
         }
       }
     }
+  }
 
   printf("Shit works for process: %d\n", rank);
 
