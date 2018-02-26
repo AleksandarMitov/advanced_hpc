@@ -245,19 +245,19 @@ int main(int argc, char* argv[])
     }
     // Done sending stuff
   }
-    //Receive data from master
-    for(int col = 1; col < child_params.nx-1; ++col) {
-      MPI_Recv(rbuffer_cells, child_params.ny*NSPEEDS, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      MPI_Recv(rbuffer_obstacles, child_params.ny, MPI_INT, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      for(int row = 0; row < child_params.ny; ++row) {
-        child_obstacles[row*child_params.nx + col] = rbuffer_obstacles[row];
-        t_speed speeds;
-        for(int speed = 0; speed < NSPEEDS; ++speed) {
-          speeds.speeds[speed] = rbuffer_cells[row*NSPEEDS + speed];
-        }
-        child_cells[row*child_params.nx + col] = speeds;
+  //Receive data from master
+  for(int col = 1; col < child_params.nx-1; ++col) {
+    MPI_Recv(rbuffer_cells, child_params.ny*NSPEEDS, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv(rbuffer_obstacles, child_params.ny, MPI_INT, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    for(int row = 0; row < child_params.ny; ++row) {
+      child_obstacles[row*child_params.nx + col] = rbuffer_obstacles[row];
+      t_speed speeds;
+      for(int speed = 0; speed < NSPEEDS; ++speed) {
+        speeds.speeds[speed] = rbuffer_cells[row*NSPEEDS + speed];
       }
+      child_cells[row*child_params.nx + col] = speeds;
     }
+  }
 
   printf("DONE\n");
 
@@ -275,6 +275,49 @@ int main(int argc, char* argv[])
     printf("tot density: %.12E\n", total_density(params, cells));
 #endif
   }
+
+  //Send data from child process to master
+  float *send_child_buffer_cells = (float*) malloc(child_params.nx * child_params.ny * NSPEEDS * sizeof(float));
+  int *send_child_buffer_obstacles = (int*) malloc(child_params.nx * child_params.ny * sizeof(int));
+  for(int col = 1; col < child_params.nx-1; ++col) {
+    for(int row = 0; row < child_params.ny; ++row) {
+      send_child_buffer_obstacles[col*child_params.ny + row] = child_obstacles[row*child_params.nx + col];
+      for(int speed = 0; speed < NSPEEDS; ++speed) {
+        send_child_buffer_cells[col*child_params.ny*NSPEEDS + row*NSPEEDS + speed] = child_cells[row*child_params.nx + col].speeds[speed];
+      }
+    }
+    MPI_Request send_request;
+    MPI_Isend(&send_child_buffer_cells[col*child_params.ny*NSPEEDS], child_params.ny*NSPEEDS, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &send_request);
+    MPI_Isend(&send_child_buffer_obstacles[col*child_params.ny], child_params.ny, MPI_INT, 0, 1, MPI_COMM_WORLD, &send_request);
+  }
+
+  if(rank == 0) {
+    //Receive data from children
+    for(int process = 0; process < size; ++process) {
+      //printf("process %d\n", process);
+      int cols_per_process = params.nx / size;
+      int current_child_cols = calc_ncols_from_rank(process, size, params.nx);
+      printf("cols for process: %d are: %d\n", process, current_child_cols);
+      for(int col = process*cols_per_process, child_col = 0; col < process*cols_per_process + current_child_cols; ++col, ++child_col) {
+        printf("col: %d\n", col);
+        MPI_Recv(rbuffer_cells, child_params.ny*NSPEEDS, MPI_FLOAT, process, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(rbuffer_obstacles, child_params.ny, MPI_INT, process, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        //Fill send buffers
+        for(int row = 0; row < params.ny; ++row) {
+          //printf("row: %d, process: %d\n", row, process);
+          obstacles[row*params.nx + col] = rbuffer_obstacles[row];
+          t_speed speeds;
+          //printf("one\n");
+          for(int speed = 0; speed < NSPEEDS; ++speed) {
+            speeds.speeds[speed] = rbuffer_cells[row*NSPEEDS + speed];
+            cells[row*params.nx + col] = speeds;
+            //printf("two\n");
+          }
+        }
+      }
+    }
+
+  printf("Shit works for process: %d\n", rank);
 
   if(rank == 0) {
     gettimeofday(&timstr, NULL);
