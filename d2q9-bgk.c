@@ -389,8 +389,12 @@ int main(int argc, char* argv[])
         }
       }
     }
+    printf("DIVINDING VELOCITIES BY: %d\n", tot_u);
     for(int tt = 0; tt < child_params.maxIters; ++tt) {
       av_vels[tt] = child_vels[tt] / tot_u;
+      if(tt % 1000 == 0) {
+        printf("Velocity at %d step: %f\n", tt, av_vels[tt]);
+      }
     }
   } else {
     MPI_Send(child_vels, child_params.maxIters, MPI_FLOAT, 0, 2, MPI_COMM_WORLD);
