@@ -119,6 +119,7 @@ float calc_reynolds(const t_param params, t_speed* cells, int* obstacles);
 void die(const char* message, const int line, const char* file);
 void usage(const char* exe);
 int calc_ncols_from_rank(int rank, int size, int nx);
+void test_vels(const char* output_file, float *vels, int steps);
 
 /*
 ** main program:
@@ -399,6 +400,7 @@ int main(int argc, char* argv[])
   printf("Shit works for process: %d\n", rank);
 
   if(rank == 0) {
+    test_vels("velocities_tot_u.txt", av_vels, process_params.maxIters);
     gettimeofday(&timstr, NULL);
     toc = timstr.tv_sec + (timstr.tv_usec / 1000000.0);
     getrusage(RUSAGE_SELF, &ru);
@@ -587,6 +589,16 @@ int rebound(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obsta
   }
 
   return EXIT_SUCCESS;
+}
+
+void test_vels(const char* output_file, float *vels, int steps) {
+  FILE* fp = fopen(output_file, "w");
+  for(int i = 0; i < steps; ++i) {
+    float vel = vels[i];
+    fprintf(fp, "%.12lf\n", vel);
+  }
+
+  fclose(fp);
 }
 
 int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles)
