@@ -148,6 +148,7 @@ int main(int argc, char* argv[])
   t_speed *child_cells;
   t_speed *child_tmp_cells;
   int *child_obstacles;
+  float *child_vels;
   float *sbuffer_cells;
   float *rbuffer_cells;
   int *sbuffer_obstacles;
@@ -188,51 +189,62 @@ int main(int argc, char* argv[])
     obstaclefile = argv[2];
   }
 
-  //Work out child params
-  int child_cols = calc_ncols_from_rank(rank, size, params.nx);
   t_param child_params;
   initialise_params_from_file(paramfile, &child_params);
+  initialise_params_from_file(paramfile, &params);
+  //Work out child params
+  int child_cols = calc_ncols_from_rank(rank, size, params.nx);
   child_params.nx = child_cols + 2; // add 2 halo cols
   //Initialise child memory
   child_cells = (t_speed*)calloc((child_params.ny * child_params.nx), sizeof(t_speed));
   child_tmp_cells = (t_speed*)calloc((child_params.ny * child_params.nx), sizeof(t_speed));
   child_obstacles = (int*)calloc((child_params.ny * child_params.nx), sizeof(int));
+  child_vels = (float*) calloc(params.maxIters, sizeof(float));
   sbuffer_cells = (float*) calloc(params.ny * NSPEEDS, sizeof(float));
   rbuffer_cells = (float*) calloc(params.ny * NSPEEDS, sizeof(float));
   sbuffer_obstacles = (int *) calloc(params.ny, sizeof(int));
   rbuffer_obstacles = (int *) calloc(params.ny, sizeof(int));
 
-  if(rank == 0 || 1) {
+  printf("params.nx: %d, params.ny: %d, child_params.nx: %d, child_params.ny: %d\n", params.nx, params.ny, child_params.nx, child_params.ny);
+  if(rank == 0) {
     /* initialise our data structures and load values from file */
     initialise(paramfile, obstaclefile, &params, &cells, &tmp_cells, &obstacles, &av_vels);
 
     //allocate memory for async send buffs
-    float** send_bufffer_cells = (float**) malloc(size * sizeof(float*));
+    float** send_buffer_cells = (float**) malloc(size * sizeof(float*));
     int** send_buffer_obstacles = (int**) malloc(size * sizeof(int*));
-    for(int i = 0; i < size; ++i) {
-      send_bufffer_cells[i] = (float*) malloc(child_params.ny * child_params.nx * NSPEEDS * sizeof(float));
-      send_buffer_obstacles[i] = (int*) malloc(child_params.ny * child_params.nx * sizeof(int));
+    for(int process = 0; process < size; ++process) {
+      int process_cols = calc_ncols_from_rank(process, size, params.nx);
+      send_buffer_cells[process] = (float*) malloc(params.ny * process_cols * NSPEEDS * sizeof(float));
+      send_buffer_obstacles[process] = (int*) malloc(params.ny * process_cols * sizeof(int));
     }
+    printf("HERE\n");
     //Send data to children and itself
     for(int process = 0; process < size; ++process) {
+      //printf("process %d\n", process);
       int cols_per_process = params.nx / size;
       int current_child_cols = calc_ncols_from_rank(process, size, params.nx);
-      for(int col = process*cols_per_process; col < process*cols_per_process + current_child_cols; ++col) {
+      printf("cols for process: %d are: %d\n", process, current_child_cols);
+      for(int col = process*cols_per_process, child_col = 0; col < process*cols_per_process + current_child_cols; ++col, ++child_col) {
+        printf("col: %d\n", col);
         //Fill send buffers
         for(int row = 0; row < params.ny; ++row) {
-          send_bufffer_obstacles[col*child_params.ny + row] = obstacles[row*params.nx + col];
+          //printf("row: %d, process: %d\n", row, process);
+          send_buffer_obstacles[process][child_col*params.ny + row] = obstacles[row*params.nx + col];
+          //printf("one\n");
           for(int speed = 0; speed < NSPEEDS; ++speed) {
-            send_bufffer_cells[col*child_params.ny*NSPEEDS + row*NSPEEDS + speed] = cells[row*params.nx + col].speeds[speed];
+            send_buffer_cells[process][child_col*params.ny*NSPEEDS + row*NSPEEDS + speed] = cells[row*params.nx + col].speeds[speed];
+            //printf("two\n");
           }
         }
         //Send data
         MPI_Request send_request;
-        MPI_Isend(send_bufffer_cells[process][col*child_params.ny], params.ny*NSPEEDS, MPI_FLOAT, process, 0, MPI_COMM_WORLD, &send_request);
-        MPI_Isend(send_bufffer_obstacles[process][col*child_params.ny], params.ny, MPI_INT, process, 1, MPI_COMM_WORLD, &send_request);
+        MPI_Isend(&send_buffer_cells[process][child_col*params.ny*NSPEEDS], params.ny*NSPEEDS, MPI_FLOAT, process, 0, MPI_COMM_WORLD, &send_request);
+        MPI_Isend(&send_buffer_obstacles[process][child_col*params.ny], params.ny, MPI_INT, process, 1, MPI_COMM_WORLD, &send_request);
       }
     }
     // Done sending stuff
-  } else {
+  }
     //Receive data from master
     for(int col = 1; col < child_params.nx-1; ++col) {
       MPI_Recv(rbuffer_cells, child_params.ny*NSPEEDS, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
@@ -246,7 +258,7 @@ int main(int argc, char* argv[])
         child_cells[row*child_params.nx + col] = speeds;
       }
     }
-  }
+
   printf("DONE\n");
 
   /* iterate for maxIters timesteps */
@@ -255,8 +267,8 @@ int main(int argc, char* argv[])
 
   for (int tt = 0; tt < params.maxIters; tt++)
   {
-    timestep(params, cells, tmp_cells, obstacles);
-    av_vels[tt] = av_velocity(params, cells, obstacles);
+    timestep(child_params, child_cells, child_tmp_cells, child_obstacles);
+    child_vels[tt] = av_velocity(child_params, child_cells, child_obstacles);
 #ifdef DEBUG
     printf("==timestep: %d==\n", tt);
     printf("av velocity: %.12E\n", av_vels[tt]);
@@ -374,7 +386,7 @@ int accelerate_flow(const t_param params, t_speed* cells, int* obstacles)
   /* modify the 2nd row of the grid */
   int jj = params.ny - 2;
 
-  for (int ii = 0; ii < params.nx; ii++)
+  for (int ii = 1; ii < params.nx-1; ii++)
   {
     /* if the cell is not occupied and
     ** we don't send a negative density */
@@ -402,7 +414,7 @@ int propagate(const t_param params, t_speed* cells, t_speed* tmp_cells)
   /* loop over _all_ cells */
   for (int jj = 0; jj < params.ny; jj++)
   {
-    for (int ii = 0; ii < params.nx; ii++)
+    for (int ii = 1; ii < params.nx-1; ii++)
     {
       /* determine indices of axis-direction neighbours
       ** respecting periodic boundary conditions (wrap around) */
@@ -433,7 +445,7 @@ int rebound(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obsta
   /* loop over the cells in the grid */
   for (int jj = 0; jj < params.ny; jj++)
   {
-    for (int ii = 0; ii < params.nx; ii++)
+    for (int ii = 1; ii < params.nx-1; ii++)
     {
       /* if the cell contains an obstacle */
       if (obstacles[jj*params.nx + ii])
@@ -468,7 +480,7 @@ int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obs
   ** are in the scratch-space grid */
   for (int jj = 0; jj < params.ny; jj++)
   {
-    for (int ii = 0; ii < params.nx; ii++)
+    for (int ii = 1; ii < params.nx-1; ii++)
     {
       /* don't consider occupied cells */
       if (!obstacles[ii + jj*params.nx])
@@ -569,7 +581,7 @@ float av_velocity(const t_param params, t_speed* cells, int* obstacles)
   /* loop over all non-blocked cells */
   for (int jj = 0; jj < params.ny; jj++)
   {
-    for (int ii = 0; ii < params.nx; ii++)
+    for (int ii = 1; ii < params.nx-1; ii++)
     {
       /* ignore occupied cells */
       if (!obstacles[ii + jj*params.nx])
