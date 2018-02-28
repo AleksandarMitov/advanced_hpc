@@ -178,11 +178,10 @@ int main(int argc, char* argv[])
   ** consisting of all the processes in the launched MPI 'job'
   */
   MPI_Comm_size( MPI_COMM_WORLD, &size );
-  printf("SIZE: %d\n", size);
+  printf("Number of processes: %d\n", size);
 
   /* determine the RANK of the current process [0:SIZE-1] */
   MPI_Comm_rank( MPI_COMM_WORLD, &rank );
-  printf("RANK: %d\n", rank);
 
   /* parse the command line */
   if (argc != 3)
@@ -195,24 +194,24 @@ int main(int argc, char* argv[])
     obstaclefile = argv[2];
   }
 
-  t_param child_params;
-  initialise_params_from_file(paramfile, &child_params);
   initialise_params_from_file(paramfile, &params);
+  t_param child_params;
+  child_params = params;
+
   //Work out child params
   int child_cols = calc_ncols_from_rank(rank, size, params.nx);
   child_params.nx = child_cols + 2; // add 2 halo cols
   //Initialise child memory
   rbuffer_vels = (float*) calloc(params.maxIters, sizeof(float));
-  child_cells = (t_speed*)calloc((child_params.ny * child_params.nx), sizeof(t_speed));
-  child_tmp_cells = (t_speed*)calloc((child_params.ny * child_params.nx), sizeof(t_speed));
-  child_obstacles = (int*)calloc((child_params.ny * child_params.nx), sizeof(int));
+  child_cells = (t_speed*) calloc((child_params.ny * child_params.nx), sizeof(t_speed));
+  child_tmp_cells = (t_speed*) calloc((child_params.ny * child_params.nx), sizeof(t_speed));
+  child_obstacles = (int*) calloc((child_params.ny * child_params.nx), sizeof(int));
   child_vels = (float*) calloc(params.maxIters, sizeof(float));
   sbuffer_cells = (float*) calloc(params.ny * NSPEEDS, sizeof(float));
   rbuffer_cells = (float*) calloc(params.ny * NSPEEDS, sizeof(float));
   sbuffer_obstacles = (int *) calloc(params.ny, sizeof(int));
   rbuffer_obstacles = (int *) calloc(params.ny, sizeof(int));
 
-  printf("params.nx: %d, params.ny: %d, child_params.nx: %d, child_params.ny: %d\n", params.nx, params.ny, child_params.nx, child_params.ny);
   if(rank == 0) {
     /* initialise our data structures and load values from file */
     initialise(paramfile, obstaclefile, &params, &cells, &tmp_cells, &obstacles, &av_vels);
@@ -225,34 +224,17 @@ int main(int argc, char* argv[])
       send_buffer_cells[process] = (float*) malloc(params.ny * process_cols * NSPEEDS * sizeof(float));
       send_buffer_obstacles[process] = (int*) malloc(params.ny * process_cols * sizeof(int));
     }
-    if(TEST) {
-      int c = 1;
-      for(int i = 0 ; i < params.ny; ++i) {
-        for(int j = 0; j < params.nx; ++j) {
-          for(int z = 0; z < NSPEEDS; ++z) {
-            cells[i*params.nx + j].speeds[z] = c;
-          }
-          ++c;
-        }
-      }
-    }
-    printf("HERE\n");
+
     //Send data to children and itself
     for(int process = 0; process < size; ++process) {
-      //printf("process %d\n", process);
       int cols_per_process = params.nx / size;
       int current_child_cols = calc_ncols_from_rank(process, size, params.nx);
-      //printf("cols for process: %d are: %d\n", process, current_child_cols);
       for(int col = process*cols_per_process, child_col = 0; col < process*cols_per_process + current_child_cols; ++col, ++child_col) {
-        //printf("col: %d\n", col);
         //Fill send buffers
         for(int row = 0; row < params.ny; ++row) {
-          //printf("row: %d, process: %d\n", row, process);
           send_buffer_obstacles[process][child_col*params.ny + row] = obstacles[row*params.nx + col];
-          //printf("one\n");
           for(int speed = 0; speed < NSPEEDS; ++speed) {
             send_buffer_cells[process][child_col*params.ny*NSPEEDS + row*NSPEEDS + speed] = cells[row*params.nx + col].speeds[speed];
-            //printf("two\n");
           }
         }
         //Send data
@@ -277,8 +259,6 @@ int main(int argc, char* argv[])
     }
   }
 
-  printf("DONE\n");
-
   /* iterate for maxIters timesteps */
   gettimeofday(&timstr, NULL);
   tic = timstr.tv_sec + (timstr.tv_usec / 1000000.0);
@@ -293,13 +273,9 @@ int main(int argc, char* argv[])
     if(rank == 0 && tt % 500 == 0) printf("iteration: %d\n", tt);
     //Exchange halos
     exchange_halos(rank, size, child_params, child_cells, child_obstacles, sbuffer_cells, sbuffer_obstacles, rbuffer_cells, rbuffer_obstacles);
-    if((tt < 5 || tt % 2000 == 0) && 0) output_state(output_file, tt, child_cells, child_obstacles, child_params.nx, child_params.ny);
-
     //now do computations
     timestep(child_params, child_cells, child_tmp_cells, child_obstacles);
     child_vels[tt] = av_velocity(child_params, child_cells, child_obstacles);
-
-    if((tt < 5 || tt % 2000 == 0) && 0) output_state(output_file, tt, child_cells, child_obstacles, child_params.nx, child_params.ny);
 
 #ifdef DEBUG
     printf("==timestep: %d==\n", tt);
@@ -326,24 +302,18 @@ int main(int argc, char* argv[])
   if(rank == 0) {
     //Receive data from children
     for(int process = 0; process < size; ++process) {
-      //printf("process %d\n", process);
       int cols_per_process = params.nx / size;
       int current_child_cols = calc_ncols_from_rank(process, size, params.nx);
-      //printf("cols for process: %d are: %d\n", process, current_child_cols);
       for(int col = process*cols_per_process, child_col = 0; col < process*cols_per_process + current_child_cols; ++col, ++child_col) {
-        //printf("col: %d\n", col);
         MPI_Recv(rbuffer_cells, child_params.ny*NSPEEDS, MPI_FLOAT, process, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         MPI_Recv(rbuffer_obstacles, child_params.ny, MPI_INT, process, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         //Fill send buffers
         for(int row = 0; row < params.ny; ++row) {
-          //printf("row: %d, process: %d\n", row, process);
           obstacles[row*params.nx + col] = rbuffer_obstacles[row];
           t_speed speeds;
-          //printf("one\n");
           for(int speed = 0; speed < NSPEEDS; ++speed) {
             speeds.speeds[speed] = rbuffer_cells[row*NSPEEDS + speed];
             cells[row*params.nx + col] = speeds;
-            //printf("two\n");
           }
         }
       }
@@ -367,23 +337,17 @@ int main(int argc, char* argv[])
         }
       }
     }
-    printf("DIVINDING VELOCITIES BY: %d\n", tot_u);
     for(int tt = 0; tt < child_params.maxIters; ++tt) {
       av_vels[tt] = child_vels[tt] / tot_u;
-      if(tt % 1000 == 0) {
-        printf("Velocity at %d step: %f\n", tt, av_vels[tt]);
-      }
     }
   } else {
     MPI_Send(child_vels, child_params.maxIters, MPI_FLOAT, 0, 2, MPI_COMM_WORLD);
   }
 
-  printf("Shit works for process: %d\n", rank);
-
   if(rank == 0) {
-    char output_file[1024];
-    sprintf(output_file, "velocities_tot_u_size_%d.txt", size);
-    test_vels(output_file, av_vels, child_params.maxIters);
+    //char output_file[1024];
+    //sprintf(output_file, "velocities_tot_u_size_%d.txt", size);
+    //test_vels(output_file, av_vels, child_params.maxIters);
     gettimeofday(&timstr, NULL);
     toc = timstr.tv_sec + (timstr.tv_usec / 1000000.0);
     getrusage(RUSAGE_SELF, &ru);
@@ -421,7 +385,6 @@ void exchange_halos(int rank, int size, t_param child_params, t_speed *child_cel
   int right = (rank + 1) % size;
   //send to the left, receive from right
   //fill with left col
-  //printf("LEFT %d, RIGHT %d\n", left, right);
   for(int row = 0; row < child_params.ny; ++row) {
     for(int speed = 0; speed < NSPEEDS; ++speed) {
       sbuffer_cells[row*NSPEEDS + speed] = child_cells[row*child_params.nx + 1].speeds[speed];
