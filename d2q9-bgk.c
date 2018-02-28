@@ -60,6 +60,7 @@
 #define NSPEEDS         9
 #define FINALSTATEFILE  "final_state.dat"
 #define AVVELSFILE      "av_vels.dat"
+const int TEST = 0;
 
 /* struct to hold the parameter values */
 typedef struct
@@ -119,6 +120,7 @@ float calc_reynolds(const t_param params, t_speed* cells, int* obstacles);
 void die(const char* message, const int line, const char* file);
 void usage(const char* exe);
 int calc_ncols_from_rank(int rank, int size, int nx);
+void output_state(const char* output_file, int step, t_speed *cells, int *obstacles, int nx, int ny);
 void test_vels(const char* output_file, float *vels, int steps);
 
 /*
@@ -221,15 +223,26 @@ int main(int argc, char* argv[])
       send_buffer_cells[process] = (float*) malloc(params.ny * process_cols * NSPEEDS * sizeof(float));
       send_buffer_obstacles[process] = (int*) malloc(params.ny * process_cols * sizeof(int));
     }
+    if(TEST) {
+      int c = 1;
+      for(int i = 0 ; i < params.ny; ++i) {
+        for(int j = 0; j < params.nx; ++j) {
+          for(int z = 0; z < NSPEEDS; ++z) {
+            cells[i*params.nx + j].speeds[z] = c;
+          }
+          ++c;
+        }
+      }
+    }
     printf("HERE\n");
     //Send data to children and itself
     for(int process = 0; process < size; ++process) {
       //printf("process %d\n", process);
       int cols_per_process = params.nx / size;
       int current_child_cols = calc_ncols_from_rank(process, size, params.nx);
-      printf("cols for process: %d are: %d\n", process, current_child_cols);
+      //printf("cols for process: %d are: %d\n", process, current_child_cols);
       for(int col = process*cols_per_process, child_col = 0; col < process*cols_per_process + current_child_cols; ++col, ++child_col) {
-        printf("col: %d\n", col);
+        //printf("col: %d\n", col);
         //Fill send buffers
         for(int row = 0; row < params.ny; ++row) {
           //printf("row: %d, process: %d\n", row, process);
@@ -267,6 +280,10 @@ int main(int argc, char* argv[])
   /* iterate for maxIters timesteps */
   gettimeofday(&timstr, NULL);
   tic = timstr.tv_sec + (timstr.tv_usec / 1000000.0);
+
+  char output_file[1024];
+  sprintf(output_file, "final_state_size_%d.txt", size);
+  fclose(fopen(output_file, "w"));
 
   for (int tt = 0; tt < params.maxIters; tt++)
   {
@@ -319,11 +336,14 @@ int main(int argc, char* argv[])
       child_cells[row*child_params.nx] = speeds;
       child_obstacles[row*child_params.nx] = rbuffer_obstacles[row];
     }
-    //output_state(file_name, tt, process_cells, process_obstacles, process_params.nx, process_params.ny);
+    if((tt < 5 || tt % 2000 == 0) && 0) output_state(output_file, tt, child_cells, child_obstacles, child_params.nx, child_params.ny);
 
     //now do computations
     timestep(child_params, child_cells, child_tmp_cells, child_obstacles);
     child_vels[tt] = av_velocity(child_params, child_cells, child_obstacles);
+
+    if((tt < 5 || tt % 2000 == 0) && 0) output_state(output_file, tt, child_cells, child_obstacles, child_params.nx, child_params.ny);
+
 #ifdef DEBUG
     printf("==timestep: %d==\n", tt);
     printf("av velocity: %.12E\n", av_vels[tt]);
@@ -352,9 +372,9 @@ int main(int argc, char* argv[])
       //printf("process %d\n", process);
       int cols_per_process = params.nx / size;
       int current_child_cols = calc_ncols_from_rank(process, size, params.nx);
-      printf("cols for process: %d are: %d\n", process, current_child_cols);
+      //printf("cols for process: %d are: %d\n", process, current_child_cols);
       for(int col = process*cols_per_process, child_col = 0; col < process*cols_per_process + current_child_cols; ++col, ++child_col) {
-        printf("col: %d\n", col);
+        //printf("col: %d\n", col);
         MPI_Recv(rbuffer_cells, child_params.ny*NSPEEDS, MPI_FLOAT, process, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         MPI_Recv(rbuffer_obstacles, child_params.ny, MPI_INT, process, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         //Fill send buffers
@@ -404,7 +424,9 @@ int main(int argc, char* argv[])
   printf("Shit works for process: %d\n", rank);
 
   if(rank == 0) {
-    test_vels("velocities_tot_u.txt", av_vels, process_params.maxIters);
+    char output_file[1024];
+    sprintf(output_file, "velocities_tot_u_size_%d.txt", size);
+    test_vels(output_file, av_vels, child_params.maxIters);
     gettimeofday(&timstr, NULL);
     toc = timstr.tv_sec + (timstr.tv_usec / 1000000.0);
     getrusage(RUSAGE_SELF, &ru);
@@ -434,6 +456,33 @@ int main(int argc, char* argv[])
   free(rbuffer_obstacles);
 
   return EXIT_SUCCESS;
+}
+
+void output_state(const char* output_file, int step, t_speed *cells, int *obstacles, int nx, int ny) {
+  FILE* fp = fopen(output_file, "a");
+  if (fp == NULL)
+  {
+    printf("could not open input parameter file: %s", output_file);
+    return;
+  }
+  fprintf(fp, "Step %d:\n", step);
+  for(int i = 0; i < ny; ++i) {
+    for(int j = 0; j < nx; ++j) {
+      for(int z = 0; z < 9; ++z) {
+        fprintf(fp, "%f ", cells[i*nx + j].speeds[z]);
+      }
+      fprintf(fp, "\n");
+    }
+    fprintf(fp, "\n");
+  }
+  for(int i = 0; i < ny; ++i) {
+    for(int j = 0; j < nx; ++j) {
+      fprintf(fp, "%d ", obstacles[i*nx + j]);
+    }
+    fprintf(fp, "\n");
+  }
+  fprintf(fp, "\n\n");
+  fclose(fp);
 }
 
 int calc_ncols_from_rank(int rank, int size, int nx)
