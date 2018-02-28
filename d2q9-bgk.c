@@ -178,7 +178,6 @@ int main(int argc, char* argv[])
   ** consisting of all the processes in the launched MPI 'job'
   */
   MPI_Comm_size( MPI_COMM_WORLD, &size );
-  printf("Number of processes: %d\n", size);
 
   /* determine the RANK of the current process [0:SIZE-1] */
   MPI_Comm_rank( MPI_COMM_WORLD, &rank );
@@ -213,6 +212,7 @@ int main(int argc, char* argv[])
   rbuffer_obstacles = (int *) calloc(params.ny, sizeof(int));
 
   if(rank == 0) {
+    printf("Number of processes: %d\n", size);
     /* initialise our data structures and load values from file */
     initialise(paramfile, obstaclefile, &params, &cells, &tmp_cells, &obstacles, &av_vels);
 
