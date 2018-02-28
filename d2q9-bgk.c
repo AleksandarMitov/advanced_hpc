@@ -122,6 +122,8 @@ void usage(const char* exe);
 int calc_ncols_from_rank(int rank, int size, int nx);
 void output_state(const char* output_file, int step, t_speed *cells, int *obstacles, int nx, int ny);
 void test_vels(const char* output_file, float *vels, int steps);
+void exchange_halos(int rank, int size, t_param child_params, t_speed *child_cells, int* child_obstacles,
+                      float* sbuffer_cells, int* sbuffer_obstacles, float* rbuffer_cells, int* rbuffer_obstacles);
 
 /*
 ** main program:
@@ -290,52 +292,7 @@ int main(int argc, char* argv[])
     //output_state(file_name, tt, process_cells, process_obstacles, process_params.nx, process_params.ny);
     if(rank == 0 && tt % 500 == 0) printf("iteration: %d\n", tt);
     //Exchange halos
-    int left = (rank == 0) ? (rank + size - 1) : (rank - 1); // left is bottom, right is top equiv
-    int right = (rank + 1) % size;
-    //send to the left, receive from right
-    //fill with left col
-    //printf("LEFT %d, RIGHT %d\n", left, right);
-    for(int row = 0; row < child_params.ny; ++row) {
-      for(int speed = 0; speed < NSPEEDS; ++speed) {
-        sbuffer_cells[row*NSPEEDS + speed] = child_cells[row*child_params.nx + 1].speeds[speed];
-      }
-      sbuffer_obstacles[row] = child_obstacles[row*child_params.nx + 1];
-    }
-
-    MPI_Sendrecv(sbuffer_cells, child_params.ny*NSPEEDS, MPI_FLOAT, left, 0, rbuffer_cells,
-                child_params.ny*NSPEEDS, MPI_FLOAT, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    MPI_Sendrecv(sbuffer_obstacles, child_params.ny, MPI_INT, left, 1, rbuffer_obstacles,
-                child_params.ny, MPI_INT, right, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    //populate right col
-    for(int row = 0; row < child_params.ny; ++row) {
-      t_speed speeds;
-      for(int speed = 0; speed < NSPEEDS; ++speed) {
-        speeds.speeds[speed] = rbuffer_cells[row*NSPEEDS + speed];
-      }
-      child_cells[row*child_params.nx + (child_params.nx - 1)] = speeds;
-      child_obstacles[row*child_params.nx + (child_params.nx - 1)] = rbuffer_obstacles[row];
-    }
-    //send to right, receive from left
-    //fill with right col
-    for(int row = 0; row < child_params.ny; ++row) {
-      for(int speed = 0; speed < NSPEEDS; ++speed) {
-        sbuffer_cells[row*NSPEEDS + speed] = child_cells[row*child_params.nx + (child_params.nx - 2)].speeds[speed];
-      }
-      sbuffer_obstacles[row] = child_obstacles[row*child_params.nx + (child_params.nx - 2)];
-    }
-    MPI_Sendrecv(sbuffer_cells, child_params.ny*NSPEEDS, MPI_FLOAT, right, 0, rbuffer_cells,
-                child_params.ny*NSPEEDS, MPI_FLOAT, left, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    MPI_Sendrecv(sbuffer_obstacles, child_params.ny, MPI_INT, right, 1, rbuffer_obstacles,
-                child_params.ny, MPI_INT, left, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    //populate left col
-    for(int row = 0; row < child_params.ny; ++row) {
-      t_speed speeds;
-      for(int speed = 0; speed < NSPEEDS; ++speed) {
-        speeds.speeds[speed] = rbuffer_cells[row*NSPEEDS + speed];
-      }
-      child_cells[row*child_params.nx] = speeds;
-      child_obstacles[row*child_params.nx] = rbuffer_obstacles[row];
-    }
+    exchange_halos(rank, size, child_params, child_cells, child_obstacles, sbuffer_cells, sbuffer_obstacles, rbuffer_cells, rbuffer_obstacles);
     if((tt < 5 || tt % 2000 == 0) && 0) output_state(output_file, tt, child_cells, child_obstacles, child_params.nx, child_params.ny);
 
     //now do computations
@@ -456,6 +413,56 @@ int main(int argc, char* argv[])
   free(rbuffer_obstacles);
 
   return EXIT_SUCCESS;
+}
+
+void exchange_halos(int rank, int size, t_param child_params, t_speed *child_cells, int* child_obstacles,
+                      float* sbuffer_cells, int* sbuffer_obstacles, float* rbuffer_cells, int* rbuffer_obstacles) {
+  int left = (rank == 0) ? (rank + size - 1) : (rank - 1); // left is bottom, right is top equiv
+  int right = (rank + 1) % size;
+  //send to the left, receive from right
+  //fill with left col
+  //printf("LEFT %d, RIGHT %d\n", left, right);
+  for(int row = 0; row < child_params.ny; ++row) {
+    for(int speed = 0; speed < NSPEEDS; ++speed) {
+      sbuffer_cells[row*NSPEEDS + speed] = child_cells[row*child_params.nx + 1].speeds[speed];
+    }
+    sbuffer_obstacles[row] = child_obstacles[row*child_params.nx + 1];
+  }
+
+  MPI_Sendrecv(sbuffer_cells, child_params.ny*NSPEEDS, MPI_FLOAT, left, 0, rbuffer_cells,
+              child_params.ny*NSPEEDS, MPI_FLOAT, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+  MPI_Sendrecv(sbuffer_obstacles, child_params.ny, MPI_INT, left, 1, rbuffer_obstacles,
+              child_params.ny, MPI_INT, right, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+  //populate right col
+  for(int row = 0; row < child_params.ny; ++row) {
+    t_speed speeds;
+    for(int speed = 0; speed < NSPEEDS; ++speed) {
+      speeds.speeds[speed] = rbuffer_cells[row*NSPEEDS + speed];
+    }
+    child_cells[row*child_params.nx + (child_params.nx - 1)] = speeds;
+    child_obstacles[row*child_params.nx + (child_params.nx - 1)] = rbuffer_obstacles[row];
+  }
+  //send to right, receive from left
+  //fill with right col
+  for(int row = 0; row < child_params.ny; ++row) {
+    for(int speed = 0; speed < NSPEEDS; ++speed) {
+      sbuffer_cells[row*NSPEEDS + speed] = child_cells[row*child_params.nx + (child_params.nx - 2)].speeds[speed];
+    }
+    sbuffer_obstacles[row] = child_obstacles[row*child_params.nx + (child_params.nx - 2)];
+  }
+  MPI_Sendrecv(sbuffer_cells, child_params.ny*NSPEEDS, MPI_FLOAT, right, 0, rbuffer_cells,
+              child_params.ny*NSPEEDS, MPI_FLOAT, left, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+  MPI_Sendrecv(sbuffer_obstacles, child_params.ny, MPI_INT, right, 1, rbuffer_obstacles,
+              child_params.ny, MPI_INT, left, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+  //populate left col
+  for(int row = 0; row < child_params.ny; ++row) {
+    t_speed speeds;
+    for(int speed = 0; speed < NSPEEDS; ++speed) {
+      speeds.speeds[speed] = rbuffer_cells[row*NSPEEDS + speed];
+    }
+    child_cells[row*child_params.nx] = speeds;
+    child_obstacles[row*child_params.nx] = rbuffer_obstacles[row];
+  }
 }
 
 void output_state(const char* output_file, int step, t_speed *cells, int *obstacles, int nx, int ny) {
