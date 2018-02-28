@@ -563,7 +563,7 @@ int accelerate_flow(const t_param params, t_speed* cells, int* obstacles)
   /* modify the 2nd row of the grid */
   int jj = params.ny - 2;
 
-  for (int ii = 1; ii < params.nx-1; ii++)
+  for (int ii = 0; ii < params.nx; ii++)
   {
     /* if the cell is not occupied and
     ** we don't send a negative density */
@@ -591,7 +591,7 @@ int propagate(const t_param params, t_speed* cells, t_speed* tmp_cells)
   /* loop over _all_ cells */
   for (int jj = 0; jj < params.ny; jj++)
   {
-    for (int ii = 1; ii < params.nx-1; ii++)
+    for (int ii = 0; ii < params.nx; ii++)
     {
       /* determine indices of axis-direction neighbours
       ** respecting periodic boundary conditions (wrap around) */
@@ -622,7 +622,7 @@ int rebound(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obsta
   /* loop over the cells in the grid */
   for (int jj = 0; jj < params.ny; jj++)
   {
-    for (int ii = 1; ii < params.nx-1; ii++)
+    for (int ii = 0; ii < params.nx; ii++)
     {
       /* if the cell contains an obstacle */
       if (obstacles[jj*params.nx + ii])
@@ -667,7 +667,7 @@ int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obs
   ** are in the scratch-space grid */
   for (int jj = 0; jj < params.ny; jj++)
   {
-    for (int ii = 1; ii < params.nx-1; ii++)
+    for (int ii = 0; ii < params.nx; ii++)
     {
       /* don't consider occupied cells */
       if (!obstacles[ii + jj*params.nx])
