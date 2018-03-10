@@ -62,6 +62,7 @@
 #define AVVELSFILE      "av_vels.dat"
 const int TEST = 0;
 const int ASYNC_HALOS = 1;
+const int SPREAD_COLS_EVENLY = 1;
 
 /* struct to hold the parameter values */
 typedef struct
@@ -134,6 +135,8 @@ void exchange_halos_async(MPI_Request** requests, int rank, int size, t_param ch
                       float* sbuffer_cells2, float* rbuffer_cells2);
 void swap_floats(float *var1, float *var2);
 void swap_cells(t_speed *var1, t_speed *var2);
+int start_process_grid_from(int size, int rank, int n);
+int min(int a, int b);
 
 /*
 ** main program:
@@ -232,6 +235,7 @@ int main(int argc, char* argv[])
   if(rank == 0) {
     printf("Number of processes: %d\n", size);
     if(ASYNC_HALOS) printf("Asynchronous halo exchange.\n");
+    if(SPREAD_COLS_EVENLY) printf("Spreading remainder cols evenly.\n");
     /* initialise our data structures and load values from file */
     initialise(paramfile, obstaclefile, &params, &cells, &tmp_cells, &obstacles, &av_vels);
 
@@ -246,9 +250,10 @@ int main(int argc, char* argv[])
 
     //Send data to children and itself
     for(int process = 0; process < size; ++process) {
-      int cols_per_process = params.nx / size;
       int current_child_cols = calc_ncols_from_rank(process, size, params.nx);
-      for(int col = process*cols_per_process, child_col = 0; col < process*cols_per_process + current_child_cols; ++col, ++child_col) {
+      int start_from = start_process_grid_from(size, process, params.nx);
+      //printf("rank: %d, start from: %d, cols: %d\n", process, start_from, current_child_cols);
+      for(int col = start_from, child_col = 0; col < start_from + current_child_cols; ++col, ++child_col) {
         //Fill send buffers
         for(int row = 0; row < params.ny; ++row) {
           send_buffer_obstacles[process][child_col*params.ny + row] = obstacles[row*params.nx + col];
@@ -363,9 +368,9 @@ int main(int argc, char* argv[])
   if(rank == 0) {
     //Receive data from children
     for(int process = 0; process < size; ++process) {
-      int cols_per_process = params.nx / size;
       int current_child_cols = calc_ncols_from_rank(process, size, params.nx);
-      for(int col = process*cols_per_process, child_col = 0; col < process*cols_per_process + current_child_cols; ++col, ++child_col) {
+      int start_from = start_process_grid_from(size, process, params.nx);
+      for(int col = start_from, child_col = 0; col < start_from + current_child_cols; ++col, ++child_col) {
         MPI_Recv(rbuffer_cells1, child_params.ny*NSPEEDS, MPI_FLOAT, process, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         MPI_Recv(rbuffer_obstacles1, child_params.ny, MPI_INT, process, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         //Fill send buffers
@@ -452,6 +457,24 @@ void swap_cells(t_speed *var1, t_speed *var2) {
   t_speed temp = *var1;
   *var1 = *var2;
   *var2 = temp;
+}
+
+int start_process_grid_from(int size, int rank, int n) {
+  int start_from = -1;
+  int per_process = n / size;
+  if(SPREAD_COLS_EVENLY) {
+    int remainder_cols = n % size;
+    int spreaded_remainder_before_process = min(rank, remainder_cols);
+    start_from = per_process*rank + spreaded_remainder_before_process;
+  } else {
+    start_from = per_process*rank;
+  }
+
+  return start_from;
+}
+
+int min(int a, int b) {
+  return (a < b) ? a : b;
 }
 
 void exchange_obstacles(int rank, int size, t_param child_params, int *child_obstacles,
@@ -580,10 +603,19 @@ int calc_ncols_from_rank(int rank, int size, int nx)
 {
   int ncols;
 
-  ncols = nx / size;       /* integer division */
-  if ((nx % size) != 0) {  /* if there is a remainder */
-    if (rank == size - 1)
-      ncols += nx % size;  /* add remainder to last rank */
+  if(!SPREAD_COLS_EVENLY) {
+    ncols = nx / size;       /* integer division */
+    if ((nx % size) != 0) {  /* if there is a remainder */
+      if (rank == size - 1)
+        ncols += nx % size;  /* add remainder to last rank */
+    }
+  } else {
+    int per_process = nx / size;
+    int remainder_cols = nx % size;
+    ncols = per_process;
+    if(rank < remainder_cols) {
+      ++ncols;
+    }
   }
 
   return ncols;
