@@ -96,7 +96,8 @@ int initialise(const char* paramfile, const char* obstaclefile,
 ** accelerate_flow(), propagate(), rebound() & collision()
 */
 int timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles, int flag);
-int timestep_async(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles, int flag, t_speed *tmp_cells2);
+int timestep_async(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles, int flag,
+                                          t_speed *tmp_cells2, int total_requests, MPI_Request ** requests);
 int accelerate_flow(const t_param params, t_speed* cells, int* obstacles, int flag);
 int propagate(const t_param params, t_speed* cells, t_speed* tmp_cells, int flag);
 int rebound(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles, int flag);
@@ -308,7 +309,7 @@ int main(int argc, char* argv[])
                                                       sbuffer_cells2, rbuffer_cells2);
 
       //now do computations
-      timestep_async(child_params, child_cells, child_tmp_cells, child_obstacles, 0, old_cell_vals);
+      timestep_async(child_params, child_cells, child_tmp_cells, child_obstacles, 0, old_cell_vals, total_requests, requests);
       child_vels[tt] = av_velocity(child_params, child_cells, child_obstacles, 0);
       //synchronise
       for(int i = 0; i < total_requests; ++i) {
@@ -333,7 +334,7 @@ int main(int argc, char* argv[])
       }
 
       //now do computations
-      timestep_async(child_params, child_cells, child_tmp_cells, child_obstacles, 1, old_cell_vals);
+      timestep_async(child_params, child_cells, child_tmp_cells, child_obstacles, 1, old_cell_vals, total_requests, requests);
       child_vels[tt] += av_velocity(child_params, child_cells, child_obstacles, 1);
     }
 
@@ -644,7 +645,7 @@ int timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obst
   return EXIT_SUCCESS;
 }
 
-int timestep_async(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles, int flag, t_speed *tmp_cells2)
+int timestep_async(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles, int flag, t_speed *tmp_cells2, int total_requests, MPI_Request **requests)
 {
   if(flag == 0) {
     accelerate_flow(params, cells, obstacles, 0);
@@ -665,6 +666,11 @@ int timestep_async(const t_param params, t_speed* cells, t_speed* tmp_cells, int
 
     accelerate_flow(params, cells, obstacles, 1);
     propagate(params, cells, tmp_cells, 1);
+    //MPI implementations are lazy, so check for status to encourage exchange
+    for(int i = 0; i < total_requests; ++i) {
+        int res = 0;
+        MPI_Test(requests[i], &res, MPI_STATUS_IGNORE);
+    }
     rebound(params, cells, tmp_cells, obstacles, 1);
     collision(params, cells, tmp_cells, obstacles, 1);
 
