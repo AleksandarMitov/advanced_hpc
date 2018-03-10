@@ -95,6 +95,7 @@ int initialise(const char* paramfile, const char* obstaclefile,
 ** accelerate_flow(), propagate(), rebound() & collision()
 */
 int timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles, int flag);
+int timestep_async(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles, int flag, t_speed *tmp_cells2);
 int accelerate_flow(const t_param params, t_speed* cells, int* obstacles, int flag);
 int propagate(const t_param params, t_speed* cells, t_speed* tmp_cells, int flag);
 int rebound(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles, int flag);
@@ -127,6 +128,8 @@ void exchange_halos(int rank, int size, t_param child_params, t_speed *child_cel
 void exchange_halos_async(MPI_Request** requests, int rank, int size, t_param child_params, t_speed *child_cells, int* child_obstacles,
                       float* sbuffer_cells1, int* sbuffer_obstacles1, float* rbuffer_cells1, int* rbuffer_obstacles1,
                       float* sbuffer_cells2, int* sbuffer_obstacles2, float* rbuffer_cells2, int* rbuffer_obstacles2);
+void swap_floats(float *var1, float *var2);
+void swap_cells(t_speed *var1, t_speed *var2);
 
 /*
 ** main program:
@@ -166,6 +169,7 @@ int main(int argc, char* argv[])
   float *rbuffer_cells2;
   int *sbuffer_obstacles2;
   int *rbuffer_obstacles2;
+  t_speed *old_cell_vals;
 
   /* initialise our MPI environment */
   MPI_Init( &argc, &argv );
@@ -221,6 +225,7 @@ int main(int argc, char* argv[])
   rbuffer_cells2 = (float*) calloc(params.ny * NSPEEDS, sizeof(float));
   sbuffer_obstacles2 = (int *) calloc(params.ny, sizeof(int));
   rbuffer_obstacles2 = (int *) calloc(params.ny, sizeof(int));
+  old_cell_vals = (t_speed *) calloc(2 * params.ny * NSPEEDS, sizeof(t_speed));
 
   if(rank == 0) {
     printf("Number of processes: %d\n", size);
@@ -283,7 +288,9 @@ int main(int argc, char* argv[])
     //output_state(file_name, tt, process_cells, process_obstacles, process_params.nx, process_params.ny);
     if(rank == 0 && tt % 500 == 0) printf("iteration: %d\n", tt);
     //Exchange halos
-    //exchange_halos(rank, size, child_params, child_cells, child_obstacles, sbuffer_cells, sbuffer_obstacles, rbuffer_cells, rbuffer_obstacles);
+    exchange_halos(rank, size, child_params, child_cells, child_obstacles, sbuffer_cells1, sbuffer_obstacles1, rbuffer_cells1, rbuffer_obstacles1);
+
+    /*
     int total_requests = 8;
     MPI_Request** requests = (MPI_Request **) malloc(total_requests*sizeof(MPI_Request*));
     for(int i = 0; i < total_requests; ++i) {
@@ -292,9 +299,12 @@ int main(int argc, char* argv[])
     exchange_halos_async(requests, rank, size, child_params, child_cells, child_obstacles,
                                                     sbuffer_cells1, sbuffer_obstacles1, rbuffer_cells1, rbuffer_obstacles1,
                                                     sbuffer_cells2, sbuffer_obstacles2, rbuffer_cells2, rbuffer_obstacles2);
+    */
     //now do computations
-    timestep(child_params, child_cells, child_tmp_cells, child_obstacles, 0);
-    child_vels[tt] = av_velocity(child_params, child_cells, child_obstacles, 0);
+    //timestep(child_params, child_cells, child_tmp_cells, child_obstacles, 0);
+    //child_vels[tt] = av_velocity(child_params, child_cells, child_obstacles, 0);
+
+    /*
     //synchronise
     for(int i = 0; i < total_requests; ++i) {
       MPI_Request* current_request = requests[i];
@@ -318,8 +328,40 @@ int main(int argc, char* argv[])
       child_cells[row*child_params.nx + (child_params.nx - 1)] = speeds;
       child_obstacles[row*child_params.nx + (child_params.nx - 1)] = rbuffer_obstacles1[row];
     }
-    timestep(child_params, child_cells, child_tmp_cells, child_obstacles, 1);
-    child_vels[tt] += av_velocity(child_params, child_cells, child_obstacles, 1);
+    */
+    //timestep(child_params, child_cells, child_tmp_cells, child_obstacles, 0);
+    //timestep(child_params, child_cells, child_tmp_cells, child_obstacles, 2);
+
+    /*
+    accelerate_flow(child_params, child_cells, child_obstacles, 0);
+    //retain cols 2 and params.nx-3
+    for(int i = 0; i < child_params.ny; ++i) {
+      old_cell_vals[i] = child_cells[i*child_params.nx + 2];
+      old_cell_vals[child_params.ny + i] = child_cells[i*child_params.nx + (child_params.nx - 3)];
+    }
+    propagate(child_params, child_cells, child_tmp_cells, 0);
+    rebound(child_params, child_cells, child_tmp_cells, child_obstacles, 0);
+    collision(child_params, child_cells, child_tmp_cells, child_obstacles, 0);
+
+    //swap vals
+    for(int i = 0; i < child_params.ny; ++i) {
+      swap_cells(&old_cell_vals[i], &child_cells[i*child_params.nx + 2]);
+      swap_cells(&old_cell_vals[child_params.ny + i], &child_cells[i*child_params.nx + (child_params.nx - 3)]);
+    }
+
+    accelerate_flow(child_params, child_cells, child_obstacles, 1);
+    propagate(child_params, child_cells, child_tmp_cells, 1);
+    rebound(child_params, child_cells, child_tmp_cells, child_obstacles, 1);
+    collision(child_params, child_cells, child_tmp_cells, child_obstacles, 1);
+
+    for(int i = 0; i < child_params.ny; ++i) {
+      child_cells[i*child_params.nx + 2] = old_cell_vals[i];
+      child_cells[i*child_params.nx + (child_params.nx - 3)] = old_cell_vals[child_params.ny + i];
+    }
+    */
+    timestep_async(child_params, child_cells, child_tmp_cells, child_obstacles, 0, old_cell_vals);
+    timestep_async(child_params, child_cells, child_tmp_cells, child_obstacles, 1, old_cell_vals);
+    child_vels[tt] = av_velocity(child_params, child_cells, child_obstacles, 2);
 
 #ifdef DEBUG
     printf("==timestep: %d==\n", tt);
@@ -425,6 +467,18 @@ int main(int argc, char* argv[])
   free(rbuffer_obstacles2);
 
   return EXIT_SUCCESS;
+}
+
+void swap_floats(float *var1, float *var2) {
+  float temp = *var1;
+  *var1 = *var2;
+  *var2 = temp;
+}
+
+void swap_cells(t_speed *var1, t_speed *var2) {
+  t_speed temp = *var1;
+  *var1 = *var2;
+  *var2 = temp;
 }
 
 void exchange_halos_async(MPI_Request** requests, int rank, int size, t_param child_params, t_speed *child_cells, int* child_obstacles,
@@ -603,6 +657,43 @@ int timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obst
   return EXIT_SUCCESS;
 }
 
+int timestep_async(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles, int flag, t_speed *tmp_cells2)
+{
+  if(flag == 0) {
+    accelerate_flow(params, cells, obstacles, 0);
+    //retain cols 2 and params.nx-3
+    for(int i = 0; i < params.ny; ++i) {
+      tmp_cells2[i] = cells[i*params.nx + 2];
+      tmp_cells2[params.ny + i] = cells[i*params.nx + (params.nx - 3)];
+    }
+    propagate(params, cells, tmp_cells, 0);
+    rebound(params, cells, tmp_cells, obstacles, 0);
+    collision(params, cells, tmp_cells, obstacles, 0);
+  } else if(flag == 1) {
+    //swap vals
+    for(int i = 0; i < params.ny; ++i) {
+      swap_cells(&tmp_cells2[i], &cells[i*params.nx + 2]);
+      swap_cells(&tmp_cells2[params.ny + i], &cells[i*params.nx + (params.nx - 3)]);
+    }
+
+    accelerate_flow(params, cells, obstacles, 1);
+    propagate(params, cells, tmp_cells, 1);
+    rebound(params, cells, tmp_cells, obstacles, 1);
+    collision(params, cells, tmp_cells, obstacles, 1);
+
+    for(int i = 0; i < params.ny; ++i) {
+      cells[i*params.nx + 2] = tmp_cells2[i];
+      cells[i*params.nx + (params.nx - 3)] = tmp_cells2[params.ny + i];
+    }
+  } else {
+    accelerate_flow(params, cells, obstacles, flag);
+    propagate(params, cells, tmp_cells, flag);
+    rebound(params, cells, tmp_cells, obstacles, flag);
+    collision(params, cells, tmp_cells, obstacles, flag);
+  }
+  return EXIT_SUCCESS;
+}
+
 int accelerate_flow(const t_param params, t_speed* cells, int* obstacles, int flag)
 {
   /* compute weighting factors */
@@ -617,14 +708,21 @@ int accelerate_flow(const t_param params, t_speed* cells, int* obstacles, int fl
     start = 1;
     end = params.nx-1;
     increment = 1;
+  } else if(flag == 1) {
+    start = 0;
+    end = params.nx;
+    increment = 1;
   } else {
     start = 0;
     end = params.nx;
-    increment = params.nx-1;
+    increment = 1;
   }
 
   for (int ii = start; ii < end; ii += increment)
   {
+    if(flag == 1 && ii == 1) {
+      ii = params.nx - 1;
+    }
     /* if the cell is not occupied and
     ** we don't send a negative density */
     if (!obstacles[ii + jj*params.nx]
@@ -650,19 +748,26 @@ int propagate(const t_param params, t_speed* cells, t_speed* tmp_cells, int flag
 {
   int start, end, increment;
   if(flag == 0) {
-    start = 1;
-    end = params.nx-1;
+    start = 2;
+    end = params.nx-2;
+    increment = 1;
+  } else if(flag == 1) {
+    start = 0;
+    end = params.nx;
     increment = 1;
   } else {
     start = 0;
     end = params.nx;
-    increment = params.nx-1;
+    increment = 1;
   }
   /* loop over _all_ cells */
   for (int jj = 0; jj < params.ny; jj++)
   {
     for (int ii = start; ii < end; ii += increment)
     {
+      if(flag == 1 && ii == 2) {
+        ii = params.nx - 2;
+      }
       /* determine indices of axis-direction neighbours
       ** respecting periodic boundary conditions (wrap around) */
       int y_n = (jj + 1) % params.ny;
@@ -691,19 +796,26 @@ int rebound(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obsta
 {
   int start, end, increment;
   if(flag == 0) {
-    start = 1;
-    end = params.nx-1;
+    start = 2;
+    end = params.nx-2;
+    increment = 1;
+  } else if(flag == 1) {
+    start = 0;
+    end = params.nx;
     increment = 1;
   } else {
     start = 0;
     end = params.nx;
-    increment = params.nx-1;
+    increment = 1;
   }
   /* loop over the cells in the grid */
   for (int jj = 0; jj < params.ny; jj++)
   {
     for (int ii = start; ii < end; ii += increment)
     {
+      if(flag == 1 && ii == 2) {
+        ii = params.nx - 2;
+      }
       /* if the cell contains an obstacle */
       if (obstacles[jj*params.nx + ii])
       {
@@ -738,13 +850,17 @@ int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obs
 {
   int start, end, increment;
   if(flag == 0) {
-    start = 1;
-    end = params.nx-1;
+    start = 2;
+    end = params.nx-2;
+    increment = 1;
+  } else if(flag == 1) {
+    start = 0;
+    end = params.nx;
     increment = 1;
   } else {
     start = 0;
     end = params.nx;
-    increment = params.nx-1;
+    increment = 1;
   }
   const float c_sq = 1.f / 3.f; /* square of speed of sound */
   const float w0 = 4.f / 9.f;  /* weighting factor */
@@ -759,6 +875,9 @@ int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obs
   {
     for (int ii = start; ii < end; ii += increment)
     {
+      if(flag == 1 && ii == 2) {
+        ii = params.nx - 2;
+      }
       /* don't consider occupied cells */
       if (!obstacles[ii + jj*params.nx])
       {
@@ -854,10 +973,14 @@ float av_velocity(const t_param params, t_speed* cells, int* obstacles, int flag
     start = 2;
     end = params.nx-2;
     increment = 1;
+  } else if(flag == 1) {
+    start = 0;
+    end = params.nx;
+    increment = 1;
   } else {
     start = 1;
-    end = params.nx;
-    increment = params.nx-3;
+    end = params.nx-1;
+    increment = 1;
   }
 
   int    tot_cells = 0;  /* no. of cells used in calculation */
