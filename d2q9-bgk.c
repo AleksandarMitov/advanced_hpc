@@ -103,6 +103,8 @@ int accelerate_flow(const t_param params, t_speed* cells, int* obstacles, int fl
 int propagate(const t_param params, t_speed* cells, t_speed* tmp_cells, int flag);
 int rebound(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles, int flag);
 int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles, int flag);
+int merged_timestep_ops(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles, int flag);
+
 int write_values(const t_param params, t_speed* cells, int* obstacles, float* av_vels);
 void initialise_params_from_file(const char* paramfile, t_param* params);
 
@@ -445,6 +447,11 @@ int main(int argc, char* argv[])
   free(rbuffer_cells2);
 
   return EXIT_SUCCESS;
+}
+
+int merged_timestep_ops(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles, int flag) {
+  // merge propagate, collision, rebound and av_velocity
+  return 0;
 }
 
 void swap_floats(float *var1, float *var2) {
