@@ -699,6 +699,8 @@ int timestep_async(const t_param params, t_speed* cells, t_speed* tmp_cells, int
     }
 
     accelerate_flow(params, cells, obstacles, 1);
+    //merged_timestep_ops(params, cells, tmp_cells, obstacles, 1);
+
     propagate(params, cells, tmp_cells, 1);
     //MPI implementations are lazy, so check for status to encourage exchange
     for(int i = 0; i < total_requests; ++i) {
@@ -714,9 +716,10 @@ int timestep_async(const t_param params, t_speed* cells, t_speed* tmp_cells, int
     }
   } else {
     accelerate_flow(params, cells, obstacles, flag);
-    propagate(params, cells, tmp_cells, flag);
-    rebound(params, cells, tmp_cells, obstacles, flag);
-    collision(params, cells, tmp_cells, obstacles, flag);
+    merged_timestep_ops(params, cells, tmp_cells, obstacles, flag);
+    //propagate(params, cells, tmp_cells, flag);
+    //rebound(params, cells, tmp_cells, obstacles, flag);
+    //collision(params, cells, tmp_cells, obstacles, flag);
   }
   return EXIT_SUCCESS;
 }
