@@ -849,6 +849,9 @@ int merged_timestep_ops(const t_param params, t_speed* cells, t_speed* tmp_cells
       if(flag == 1 && ii == 2) {
         ii = params.nx - 2;
       }
+      t_speed currentVal = cells[jj*params.nx + ii];
+      printf("BEFORE: speed1: %d, speed2: %d, speed6: %d\n", currentVal.speed[1],
+                                      currentVal.speed[2], currentVal.speed[6]);
 
       // PROPAGATE STUFF
       /* determine indices of axis-direction neighbours
@@ -973,6 +976,9 @@ int merged_timestep_ops(const t_param params, t_speed* cells, t_speed* tmp_cells
         }
       }
       // COLLISION DONE
+      currentVal = cells[jj*params.nx + ii];
+      printf("AFTER: speed1: %d, speed2: %d, speed6: %d\n", currentVal.speed[1],
+                                      currentVal.speed[2], currentVal.speed[6]);
     }
   }
 
