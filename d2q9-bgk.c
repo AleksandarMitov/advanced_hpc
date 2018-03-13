@@ -98,7 +98,7 @@ int initialise(const char* paramfile, const char* obstaclefile,
 */
 int timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles, int flag);
 int timestep_async(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles, int flag,
-                                          t_speed *tmp_cells2, int total_requests, MPI_Request ** requests);
+                                           int total_requests, MPI_Request ** requests);
 int accelerate_flow(const t_param params, t_speed* cells, int* obstacles, int flag);
 int propagate(const t_param params, t_speed* cells, t_speed* tmp_cells, int flag);
 int rebound(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles, int flag);
@@ -316,7 +316,7 @@ int main(int argc, char* argv[])
                                                       sbuffer_cells2, rbuffer_cells2);
 
       //now do computations
-      timestep_async(child_params, child_cells, child_tmp_cells, child_obstacles, 0, old_cell_vals, total_requests, requests);
+      timestep_async(child_params, child_cells, child_obstacles, 0, old_cell_vals, total_requests, requests);
       child_vels[tt] = av_velocity(child_params, child_cells, child_obstacles, 0);
       //synchronise
       for(int i = 0; i < total_requests; ++i) {
@@ -679,7 +679,7 @@ int timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obst
   return EXIT_SUCCESS;
 }
 
-int timestep_async(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles, int flag, t_speed *tmp_cells2, int total_requests, MPI_Request **requests)
+int timestep_async(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles, int flag, int total_requests, MPI_Request **requests)
 {
   if(flag == 0) {
     accelerate_flow(params, cells, obstacles, 0);
@@ -688,9 +688,15 @@ int timestep_async(const t_param params, t_speed* cells, t_speed* tmp_cells, int
       tmp_cells2[i] = cells[i*params.nx + 2];
       tmp_cells2[params.ny + i] = cells[i*params.nx + (params.nx - 3)];
     }
+    merged_timestep_ops(params, cells, tmp_cells, obstacles, 0);
+    t_speed *cells_ptr = cells;
+    cells = tmp_cells;
+    tmp_cells = cells_ptr;
+    /*
     propagate(params, cells, tmp_cells, 0);
     rebound(params, cells, tmp_cells, obstacles, 0);
     collision(params, cells, tmp_cells, obstacles, 0);
+    */
   } else if(flag == 1) {
     //swap vals
     for(int i = 0; i < params.ny; ++i) {
@@ -699,8 +705,12 @@ int timestep_async(const t_param params, t_speed* cells, t_speed* tmp_cells, int
     }
 
     accelerate_flow(params, cells, obstacles, 1);
-    //merged_timestep_ops(params, cells, tmp_cells, obstacles, 1);
+    merged_timestep_ops(params, cells, tmp_cells, obstacles, 1);
+    t_speed *cells_ptr = cells;
+    cells = tmp_cells;
+    tmp_cells = cells_ptr;
 
+    /*
     propagate(params, cells, tmp_cells, 1);
     //MPI implementations are lazy, so check for status to encourage exchange
     for(int i = 0; i < total_requests; ++i) {
@@ -709,6 +719,7 @@ int timestep_async(const t_param params, t_speed* cells, t_speed* tmp_cells, int
     }
     rebound(params, cells, tmp_cells, obstacles, 1);
     collision(params, cells, tmp_cells, obstacles, 1);
+    */
 
     for(int i = 0; i < params.ny; ++i) {
       cells[i*params.nx + 2] = tmp_cells2[i];
@@ -717,6 +728,9 @@ int timestep_async(const t_param params, t_speed* cells, t_speed* tmp_cells, int
   } else {
     accelerate_flow(params, cells, obstacles, flag);
     merged_timestep_ops(params, cells, tmp_cells, obstacles, flag);
+    t_speed *cells_ptr = cells;
+    cells = tmp_cells;
+    tmp_cells = cells_ptr;
     //propagate(params, cells, tmp_cells, flag);
     //rebound(params, cells, tmp_cells, obstacles, flag);
     //collision(params, cells, tmp_cells, obstacles, flag);
@@ -849,9 +863,11 @@ int merged_timestep_ops(const t_param params, t_speed* cells, t_speed* tmp_cells
       if(flag == 1 && ii == 2) {
         ii = params.nx - 2;
       }
+      /*
       t_speed currentVal = cells[jj*params.nx + ii];
       printf("BEFORE: speed1: %d, speed2: %d, speed6: %d\n", currentVal.speed[1],
                                       currentVal.speed[2], currentVal.speed[6]);
+                                      */
 
       // PROPAGATE STUFF
       /* determine indices of axis-direction neighbours
@@ -881,14 +897,15 @@ int merged_timestep_ops(const t_param params, t_speed* cells, t_speed* tmp_cells
       {
         /* called after propagate, so taking values from scratch space
         ** mirroring, and writing into main grid */
-        cells[ii + jj*params.nx].speeds[1] = tmp_cells[ii + jj*params.nx].speeds[3];
-        cells[ii + jj*params.nx].speeds[2] = tmp_cells[ii + jj*params.nx].speeds[4];
-        cells[ii + jj*params.nx].speeds[3] = tmp_cells[ii + jj*params.nx].speeds[1];
-        cells[ii + jj*params.nx].speeds[4] = tmp_cells[ii + jj*params.nx].speeds[2];
-        cells[ii + jj*params.nx].speeds[5] = tmp_cells[ii + jj*params.nx].speeds[7];
-        cells[ii + jj*params.nx].speeds[6] = tmp_cells[ii + jj*params.nx].speeds[8];
-        cells[ii + jj*params.nx].speeds[7] = tmp_cells[ii + jj*params.nx].speeds[5];
-        cells[ii + jj*params.nx].speeds[8] = tmp_cells[ii + jj*params.nx].speeds[6];
+        t_speed current_cell = tmp_cells[ii + jj*params.nx];
+        tmp_cells[ii + jj*params.nx].speeds[1] = current_cell.speeds[3];
+        tmp_cells[ii + jj*params.nx].speeds[2] = current_cell.speeds[4];
+        tmp_cells[ii + jj*params.nx].speeds[3] = current_cell.speeds[1];
+        tmp_cells[ii + jj*params.nx].speeds[4] = current_cell.speeds[2];
+        tmp_cells[ii + jj*params.nx].speeds[5] = current_cell.speeds[7];
+        tmp_cells[ii + jj*params.nx].speeds[6] = current_cell.speeds[8];
+        tmp_cells[ii + jj*params.nx].speeds[7] = current_cell.speeds[5];
+        tmp_cells[ii + jj*params.nx].speeds[8] = current_cell.speeds[6];
       }
       // REBOUND DONE
 
@@ -970,15 +987,17 @@ int merged_timestep_ops(const t_param params, t_speed* cells, t_speed* tmp_cells
         /* relaxation step */
         for (int kk = 0; kk < NSPEEDS; kk++)
         {
-          cells[ii + jj*params.nx].speeds[kk] = tmp_cells[ii + jj*params.nx].speeds[kk]
+          tmp_cells[ii + jj*params.nx].speeds[kk] = tmp_cells[ii + jj*params.nx].speeds[kk]
                                                   + params.omega
                                                   * (d_equ[kk] - tmp_cells[ii + jj*params.nx].speeds[kk]);
         }
       }
       // COLLISION DONE
+      /*
       currentVal = cells[jj*params.nx + ii];
       printf("AFTER: speed1: %d, speed2: %d, speed6: %d\n", currentVal.speed[1],
                                       currentVal.speed[2], currentVal.speed[6]);
+                                      */
     }
   }
 
