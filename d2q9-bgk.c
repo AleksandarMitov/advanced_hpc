@@ -63,7 +63,7 @@
 const int TEST = 1;
 const int ASYNC_HALOS = 1;
 const int SPREAD_COLS_EVENLY = 1;
-const int MERGE_TIMESTEP = 1;
+const int MERGE_TIMESTEP = 0;
 
 /* struct to hold the parameter values */
 typedef struct
@@ -360,7 +360,7 @@ int main(int argc, char* argv[])
       printf("av velocity: %.12E\n", child_vels[tt]);
     }
   }
-
+//DONT TIME THIS!!!! {{{
   //Send data from child process to master
   float *send_child_buffer_cells = (float*) malloc(child_params.nx * child_params.ny * NSPEEDS * sizeof(float));
   int *send_child_buffer_obstacles = (int*) malloc(child_params.nx * child_params.ny * sizeof(int));
@@ -396,6 +396,8 @@ int main(int argc, char* argv[])
       }
     }
   }
+
+  //}}}
 
   //Handle average velocity computations
   if(rank == 0) {
@@ -710,9 +712,13 @@ int timestep_async(const t_param params, t_speed** cells, t_speed** tmp_cells, i
 
     if(MERGE_TIMESTEP) {
       merged_timestep_ops(params, *cells, *tmp_cells, obstacles, 0);
+
+      /*
       t_speed *cells_ptr = *cells;
       *cells = *tmp_cells;
       *tmp_cells = cells_ptr;
+      */
+
     } else {
       propagate(params, *cells, *tmp_cells, 0);
       rebound(params, *cells, *tmp_cells, obstacles, 0);
@@ -729,10 +735,11 @@ int timestep_async(const t_param params, t_speed** cells, t_speed** tmp_cells, i
 
     if(MERGE_TIMESTEP) {
       merged_timestep_ops(params, *cells, *tmp_cells, obstacles, 1);
+
       /*
       int start = 0;
       int end = params.nx;
-      int increment = params.nx - 1;
+      int increment = 1;
       for(int row = 0; row < params.ny; ++row) {
         for(int col = start; col < end; col += increment) {
           if(col == 2) {
@@ -742,9 +749,11 @@ int timestep_async(const t_param params, t_speed** cells, t_speed** tmp_cells, i
         }
       }
       */
+
       t_speed *cells_ptr = *cells;
       *cells = *tmp_cells;
       *tmp_cells = cells_ptr;
+
     } else {
       propagate(params, *cells, *tmp_cells, 1);
       //MPI implementations are lazy, so check for status to encourage exchange
