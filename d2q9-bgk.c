@@ -711,8 +711,8 @@ int timestep_async(const t_param params, t_speed** cells, t_speed** tmp_cells, i
     }
 
     if(MERGE_TIMESTEP) {
-      t_speed* tmp = (t_speed*) calloc((params.ny * params.nx), sizeof(t_speed));
-      memcpy(tmp, cells, (params.ny * params.nx) * sizeof(t_speed));
+      //t_speed* tmp = (t_speed*) calloc((params.ny * params.nx), sizeof(t_speed));
+      //memcpy(tmp, cells, (params.ny * params.nx) * sizeof(t_speed));
 
 
 
@@ -760,8 +760,9 @@ int timestep_async(const t_param params, t_speed** cells, t_speed** tmp_cells, i
 
       */
     } else {
-      t_speed* tmp = (t_speed*) calloc((params.ny * params.nx), sizeof(t_speed));
-      memcpy(tmp, cells, (params.ny * params.nx) * sizeof(t_speed));
+
+      //t_speed* tmp = (t_speed*) calloc((params.ny * params.nx), sizeof(t_speed));
+      //memcpy(tmp, cells, (params.ny * params.nx) * sizeof(t_speed));
 
 
 
@@ -770,7 +771,7 @@ int timestep_async(const t_param params, t_speed** cells, t_speed** tmp_cells, i
       collision(params, *cells, *tmp_cells, obstacles, 0);
 
 
-
+      /*
       int start, end, increment;
       if(flag == 0) {
         start = 2;
@@ -800,7 +801,7 @@ int timestep_async(const t_param params, t_speed** cells, t_speed** tmp_cells, i
         }
       }
       free(tmp);
-
+      */
 
 
     }
