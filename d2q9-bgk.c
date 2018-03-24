@@ -369,6 +369,49 @@ int main(int argc, char* argv[])
       printf("av velocity: %.12E\n", child_vels[tt]);
     }
   }
+
+  //Handle average velocity computations
+  if(rank == 0) {
+    for(int process = 1; process < size; ++process) {
+      MPI_Recv(rbuffer_vels, child_params.maxIters, MPI_FLOAT, process, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      for(int tt = 0; tt < child_params.maxIters; ++tt) {
+        child_vels[tt] += rbuffer_vels[tt];
+      }
+    }
+    //compute average velocity
+    int tot_u = 0;
+    for(int row = 0; row < params.ny; ++row) {
+      for(int col = 0; col < params.nx; ++col) {
+        if(!obstacles[row*params.nx + col]) {
+          ++tot_u;
+        }
+      }
+    }
+    for(int tt = 0; tt < child_params.maxIters; ++tt) {
+      av_vels[tt] = child_vels[tt] / tot_u;
+    }
+  } else {
+    MPI_Send(child_vels, child_params.maxIters, MPI_FLOAT, 0, 2, MPI_COMM_WORLD);
+  }
+
+  if(rank == 0) {
+    //char output_file[1024];
+    //sprintf(output_file, "velocities_tot_u_size_%d.txt", size);
+    //test_vels(output_file, av_vels, child_params.maxIters);
+    gettimeofday(&timstr, NULL);
+    toc = timstr.tv_sec + (timstr.tv_usec / 1000000.0);
+    getrusage(RUSAGE_SELF, &ru);
+    timstr = ru.ru_utime;
+    usrtim = timstr.tv_sec + (timstr.tv_usec / 1000000.0);
+    timstr = ru.ru_stime;
+    systim = timstr.tv_sec + (timstr.tv_usec / 1000000.0);
+    printf("==done==\n");
+    //printf("Reynolds number:\t\t%.12E\n", calc_reynolds(params, cells, obstacles));
+    printf("Elapsed time:\t\t\t%.6lf (s)\n", toc - tic);
+    printf("Elapsed user CPU time:\t\t%.6lf (s)\n", usrtim);
+    printf("Elapsed system CPU time:\t%.6lf (s)\n", systim);
+  }
+
 //DONT TIME THIS!!!! {{{
   //Send data from child process to master
   float *send_child_buffer_cells = (float*) malloc(child_params.nx * child_params.ny * NSPEEDS * sizeof(float));
@@ -408,48 +451,7 @@ int main(int argc, char* argv[])
 
   //}}}
 
-  //Handle average velocity computations
   if(rank == 0) {
-    for(int process = 1; process < size; ++process) {
-      MPI_Recv(rbuffer_vels, child_params.maxIters, MPI_FLOAT, process, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      for(int tt = 0; tt < child_params.maxIters; ++tt) {
-        child_vels[tt] += rbuffer_vels[tt];
-      }
-    }
-    //compute average velocity
-    int tot_u = 0;
-    for(int row = 0; row < params.ny; ++row) {
-      for(int col = 0; col < params.nx; ++col) {
-        if(!obstacles[row*params.nx + col]) {
-          ++tot_u;
-        }
-      }
-    }
-    for(int tt = 0; tt < child_params.maxIters; ++tt) {
-      av_vels[tt] = child_vels[tt] / tot_u;
-    }
-  } else {
-    MPI_Send(child_vels, child_params.maxIters, MPI_FLOAT, 0, 2, MPI_COMM_WORLD);
-  }
-
-  if(rank == 0) {
-    //char output_file[1024];
-    //sprintf(output_file, "velocities_tot_u_size_%d.txt", size);
-    //test_vels(output_file, av_vels, child_params.maxIters);
-    gettimeofday(&timstr, NULL);
-    toc = timstr.tv_sec + (timstr.tv_usec / 1000000.0);
-    getrusage(RUSAGE_SELF, &ru);
-    timstr = ru.ru_utime;
-    usrtim = timstr.tv_sec + (timstr.tv_usec / 1000000.0);
-    timstr = ru.ru_stime;
-    systim = timstr.tv_sec + (timstr.tv_usec / 1000000.0);
-
-    /* write final values and free memory */
-    printf("==done==\n");
-    printf("Reynolds number:\t\t%.12E\n", calc_reynolds(params, cells, obstacles));
-    printf("Elapsed time:\t\t\t%.6lf (s)\n", toc - tic);
-    printf("Elapsed user CPU time:\t\t%.6lf (s)\n", usrtim);
-    printf("Elapsed system CPU time:\t%.6lf (s)\n", systim);
     write_values(params, cells, obstacles, av_vels);
     finalise(&params, &cells, &tmp_cells, &obstacles, &av_vels);
   }
