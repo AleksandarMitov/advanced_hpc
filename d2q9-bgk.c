@@ -56,12 +56,13 @@
 #include <sys/time.h>
 #include <mpi.h>
 #include <sys/resource.h>
+#include <string.h>
 
 #define NSPEEDS         9
 #define FINALSTATEFILE  "final_state.dat"
 #define AVVELSFILE      "av_vels.dat"
 const int TEST = 1;
-const int ASYNC_HALOS = 0;
+const int ASYNC_HALOS = 1;
 const int SPREAD_COLS_EVENLY = 1;
 const int MERGE_TIMESTEP = 1;
 
@@ -333,7 +334,12 @@ int main(int argc, char* argv[])
         for(int speed = 0; speed < NSPEEDS; ++speed) {
           speeds.speeds[speed] = rbuffer_cells2[row*NSPEEDS + speed];
         }
-        child_cells[row*child_params.nx] = speeds;
+        if(MERGE_TIMESTEP) {
+            child_tmp_cells[row*child_params.nx] = speeds;
+            //child_tmp_cells[row*child_params.nx+1] = child_cells[row*child_params.nx+1];
+        } else {
+            child_cells[row*child_params.nx] = speeds;
+        }
       }
       //populate right col
       for(int row = 0; row < child_params.ny; ++row) {
@@ -341,7 +347,12 @@ int main(int argc, char* argv[])
         for(int speed = 0; speed < NSPEEDS; ++speed) {
           speeds.speeds[speed] = rbuffer_cells1[row*NSPEEDS + speed];
         }
-        child_cells[row*child_params.nx + (child_params.nx - 1)] = speeds;
+        if(MERGE_TIMESTEP) {
+            child_tmp_cells[row*child_params.nx + (child_params.nx - 1)] = speeds;
+            //child_tmp_cells[row*child_params.nx + (child_params.nx - 2)] = child_cells[row*child_params.nx + (child_params.nx - 2)];
+        } else {
+            child_cells[row*child_params.nx + (child_params.nx - 1)] = speeds;
+        }
       }
 
       //now do computations
@@ -708,7 +719,7 @@ int timestep_async(const t_param params, t_speed** cells, t_speed** tmp_cells, i
 
     if(MERGE_TIMESTEP) {
       //t_speed* tmp = (t_speed*) calloc((params.ny * params.nx), sizeof(t_speed));
-      //memcpy(tmp, cells, (params.ny * params.nx) * sizeof(t_speed));
+      //memcpy(*tmp_cells, *cells, (params.ny * params.nx) * sizeof(t_speed));
 
 
 
@@ -809,9 +820,23 @@ int timestep_async(const t_param params, t_speed** cells, t_speed** tmp_cells, i
   } else if(flag == 1) {
 
     if(MERGE_TIMESTEP) {
+      /*
+      for(int jj = 0; jj < params.ny; ++jj) {
+        for(int ii = 0; ii < params.nx; ++ii) {
+          float density = 0;
+          for(int z = 0; z < NSPEEDS; ++z) {
+            density += (*cells)[ii + params.nx*jj].speeds[z];
+          }
+          if(density == 0) {
+            printf("YES row: %d, col: %d\n", jj, ii);
+          }
+        }
+      }
+      */
       accelerate_flow(params, *tmp_cells, obstacles, 1);
-
       merged_timestep_ops(params, *tmp_cells, *cells, obstacles, 1);
+
+
 
       /*
       int start = 0;
@@ -837,6 +862,20 @@ int timestep_async(const t_param params, t_speed** cells, t_speed** tmp_cells, i
       for(int i = 0; i < params.ny; ++i) {
         swap_cells(&tmp_cells2[i], &(*cells)[i*params.nx + 2]);
         swap_cells(&tmp_cells2[params.ny + i], &(*cells)[i*params.nx + (params.nx - 3)]);
+      }
+
+      for(int jj = 0; jj < params.ny; ++jj) {
+        for(int ii = 0; ii < params.nx; ++ii) {
+          float density = 0;
+          for(int z = 0; z < NSPEEDS; ++z) {
+            density += (*cells)[ii + params.nx*jj].speeds[z];
+          }
+          if(density == 0) {
+            printf("YES row: %d, col: %d\n", jj, ii);
+          } else {
+            //printf("NO ");
+          }
+        }
       }
 
       accelerate_flow(params, *cells, obstacles, 1);
@@ -887,6 +926,10 @@ int accelerate_flow(const t_param params, t_speed* cells, int* obstacles, int fl
     start = 0;
     end = params.nx;
     increment = params.nx - 1;
+  } else if(flag == 2) {
+    start = 0;
+    end = params.nx;
+    increment = 1;
   } else {
     start = 0;
     end = params.nx;
@@ -895,6 +938,9 @@ int accelerate_flow(const t_param params, t_speed* cells, int* obstacles, int fl
 
   for (int ii = start; ii < end; ii += increment)
   {
+    if(flag == 3 && ii == 2) {
+      ii = params.nx-2;
+    }
     /* if the cell is not occupied and
     ** we don't send a negative density */
     if (!obstacles[ii + jj*params.nx]
@@ -1051,6 +1097,10 @@ int merged_timestep_ops(const t_param params, t_speed* cells, t_speed* tmp_cells
         for (int kk = 0; kk < NSPEEDS; kk++)
         {
           local_density += tmp_cells[ii + jj*params.nx].speeds[kk];
+          if(local_density == 0) {
+            //local_density = 0.1;
+            printf("bug on row: %d, col: %d\n", jj, ii);
+          }
         }
 
         /* compute x velocity component */
