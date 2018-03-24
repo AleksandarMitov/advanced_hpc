@@ -718,59 +718,12 @@ int timestep_async(const t_param params, t_speed** cells, t_speed** tmp_cells, i
 
 
     if(MERGE_TIMESTEP) {
-      //t_speed* tmp = (t_speed*) calloc((params.ny * params.nx), sizeof(t_speed));
-      //memcpy(*tmp_cells, *cells, (params.ny * params.nx) * sizeof(t_speed));
-
-
-
       merged_timestep_ops(params, *cells, *tmp_cells, obstacles, 0);
-
 
       t_speed *cells_ptr = *cells;
       *cells = *tmp_cells;
       *tmp_cells = cells_ptr;
-
-
-      /*
-      int start, end, increment;
-      if(flag == 0) {
-        start = 2;
-        end = params.nx-2;
-        increment = 1;
-      } else if(flag == 1) {
-        start = 0;
-        end = params.nx;
-        increment = 1;
-      } else {
-        start = 0;
-        end = params.nx;
-        increment = 1;
-      }
-      for (int jj = 0; jj < params.ny; jj++)
-      {
-        for (int ii = start; ii < end; ii += increment)
-        {
-          t_speed currentVal1 = tmp[jj*params.nx + ii];
-          printf("BEFORE: speed1: %d, speed2: %d, speed6: %d\n", currentVal.speed[1],
-                                          currentVal.speed[2], currentVal.speed[6]);
-
-
-          currentVal2 = cells[jj*params.nx + ii];
-          printf("AFTER: speed1: %d, speed2: %d, speed6: %d\n", currentVal.speed[1],
-                                          currentVal.speed[2], currentVal.speed[6]);
-        }
-      }
-      free(tmp);
-
-
-
-
-
-      */
     } else {
-
-      //t_speed* tmp = (t_speed*) calloc((params.ny * params.nx), sizeof(t_speed));
-      //memcpy(tmp, cells, (params.ny * params.nx) * sizeof(t_speed));
 
       //retain cols 2 and params.nx-3
       for(int i = 0; i < params.ny; ++i) {
@@ -781,81 +734,12 @@ int timestep_async(const t_param params, t_speed** cells, t_speed** tmp_cells, i
       propagate(params, *cells, *tmp_cells, 0);
       rebound(params, *cells, *tmp_cells, obstacles, 0);
       collision(params, *cells, *tmp_cells, obstacles, 0);
-
-
-      /*
-      int start, end, increment;
-      if(flag == 0) {
-        start = 2;
-        end = params.nx-2;
-        increment = 1;
-      } else if(flag == 1) {
-        start = 0;
-        end = params.nx;
-        increment = 1;
-      } else {
-        start = 0;
-        end = params.nx;
-        increment = 1;
-      }
-      for (int jj = 0; jj < params.ny; jj++)
-      {
-        for (int ii = start; ii < end; ii += increment)
-        {
-          t_speed currentVal1 = tmp[jj*params.nx + ii];
-          printf("BEFORE: speed1: %d, speed2: %d, speed6: %d\n", currentVal.speed[1],
-                                          currentVal.speed[2], currentVal.speed[6]);
-
-
-          currentVal2 = cells[jj*params.nx + ii];
-          printf("AFTER: speed1: %d, speed2: %d, speed6: %d\n", currentVal.speed[1],
-                                          currentVal.speed[2], currentVal.speed[6]);
-        }
-      }
-      free(tmp);
-      */
-
-
     }
   } else if(flag == 1) {
 
     if(MERGE_TIMESTEP) {
-      /*
-      for(int jj = 0; jj < params.ny; ++jj) {
-        for(int ii = 0; ii < params.nx; ++ii) {
-          float density = 0;
-          for(int z = 0; z < NSPEEDS; ++z) {
-            density += (*cells)[ii + params.nx*jj].speeds[z];
-          }
-          if(density == 0) {
-            printf("YES row: %d, col: %d\n", jj, ii);
-          }
-        }
-      }
-      */
       accelerate_flow(params, *tmp_cells, obstacles, 1);
       merged_timestep_ops(params, *tmp_cells, *cells, obstacles, 1);
-
-
-
-      /*
-      int start = 0;
-      int end = params.nx;
-      int increment = 1;
-      for(int row = 0; row < params.ny; ++row) {
-        for(int col = start; col < end; col += increment) {
-          if(col == 2) {
-            col = params.nx - 2;
-          }
-          (*cells)[row*params.nx + col] = (*tmp_cells)[row*params.nx + col];
-        }
-      }
-      */
-      /*
-      t_speed *cells_ptr = *cells;
-      *cells = *tmp_cells;
-      *tmp_cells = cells_ptr;
-      */
 
     } else {
       //swap vals
@@ -864,22 +748,7 @@ int timestep_async(const t_param params, t_speed** cells, t_speed** tmp_cells, i
         swap_cells(&tmp_cells2[params.ny + i], &(*cells)[i*params.nx + (params.nx - 3)]);
       }
 
-      for(int jj = 0; jj < params.ny; ++jj) {
-        for(int ii = 0; ii < params.nx; ++ii) {
-          float density = 0;
-          for(int z = 0; z < NSPEEDS; ++z) {
-            density += (*cells)[ii + params.nx*jj].speeds[z];
-          }
-          if(density == 0) {
-            printf("YES row: %d, col: %d\n", jj, ii);
-          } else {
-            //printf("NO ");
-          }
-        }
-      }
-
       accelerate_flow(params, *cells, obstacles, 1);
-
       propagate(params, *cells, *tmp_cells, 1);
       //MPI implementations are lazy, so check for status to encourage exchange
       for(int i = 0; i < total_requests; ++i) {
@@ -895,7 +764,6 @@ int timestep_async(const t_param params, t_speed** cells, t_speed** tmp_cells, i
     }
 
   } else {
-    //printf("yes\n");
     accelerate_flow(params, *cells, obstacles, flag);
     merged_timestep_ops(params, *cells, *tmp_cells, obstacles, flag);
     t_speed *cells_ptr = *cells;
@@ -938,9 +806,6 @@ int accelerate_flow(const t_param params, t_speed* cells, int* obstacles, int fl
 
   for (int ii = start; ii < end; ii += increment)
   {
-    if(flag == 3 && ii == 2) {
-      ii = params.nx-2;
-    }
     /* if the cell is not occupied and
     ** we don't send a negative density */
     if (!obstacles[ii + jj*params.nx]
