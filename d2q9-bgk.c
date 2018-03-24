@@ -535,6 +535,8 @@ void exchange_halos_async(MPI_Request** requests, int rank, int size, t_param ch
                       float* sbuffer_cells2, float* rbuffer_cells2) {
   int left = (rank == 0) ? (rank + size - 1) : (rank - 1); // left is bottom, right is top equiv
   int right = (rank + 1) % size;
+  MPI_Irecv(rbuffer_cells1, child_params.ny*NSPEEDS, MPI_FLOAT, right, 0, MPI_COMM_WORLD, requests[1]);
+  MPI_Irecv(rbuffer_cells2, child_params.ny*NSPEEDS, MPI_FLOAT, left, 0, MPI_COMM_WORLD, requests[3]);
   //send to the left, receive from right
   //fill with left col
   for(int row = 0; row < child_params.ny; ++row) {
@@ -543,7 +545,7 @@ void exchange_halos_async(MPI_Request** requests, int rank, int size, t_param ch
     }
   }
   MPI_Isend(sbuffer_cells1, child_params.ny*NSPEEDS, MPI_FLOAT, left, 0, MPI_COMM_WORLD, requests[0]);
-  MPI_Irecv(rbuffer_cells1, child_params.ny*NSPEEDS, MPI_FLOAT, right, 0, MPI_COMM_WORLD, requests[1]);
+
   //send to right, receive from left
   //fill with right col
   for(int row = 0; row < child_params.ny; ++row) {
@@ -552,7 +554,7 @@ void exchange_halos_async(MPI_Request** requests, int rank, int size, t_param ch
     }
   }
   MPI_Isend(sbuffer_cells2, child_params.ny*NSPEEDS, MPI_FLOAT, right, 0, MPI_COMM_WORLD, requests[2]);
-  MPI_Irecv(rbuffer_cells2, child_params.ny*NSPEEDS, MPI_FLOAT, left, 0, MPI_COMM_WORLD, requests[3]);
+
 }
 
 void exchange_halos(int rank, int size, t_param child_params, t_speed *child_cells,
@@ -960,10 +962,6 @@ int merged_timestep_ops(const t_param params, t_speed* cells, t_speed* tmp_cells
         for (int kk = 0; kk < NSPEEDS; kk++)
         {
           local_density += tmp_cells[ii + jj*params.nx].speeds[kk];
-          if(local_density == 0) {
-            //local_density = 0.1;
-            printf("bug on row: %d, col: %d\n", jj, ii);
-          }
         }
 
         /* compute x velocity component */
