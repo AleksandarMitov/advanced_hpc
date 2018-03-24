@@ -336,7 +336,6 @@ int main(int argc, char* argv[])
         }
         if(MERGE_TIMESTEP) {
             child_tmp_cells[row*child_params.nx] = speeds;
-            //child_tmp_cells[row*child_params.nx+1] = child_cells[row*child_params.nx+1];
         } else {
             child_cells[row*child_params.nx] = speeds;
         }
@@ -349,7 +348,6 @@ int main(int argc, char* argv[])
         }
         if(MERGE_TIMESTEP) {
             child_tmp_cells[row*child_params.nx + (child_params.nx - 1)] = speeds;
-            //child_tmp_cells[row*child_params.nx + (child_params.nx - 2)] = child_cells[row*child_params.nx + (child_params.nx - 2)];
         } else {
             child_cells[row*child_params.nx + (child_params.nx - 1)] = speeds;
         }
@@ -716,10 +714,8 @@ int timestep_async(const t_param params, t_speed** cells, t_speed** tmp_cells, i
   if(flag == 0) {
     accelerate_flow(params, *cells, obstacles, 0);
 
-
     if(MERGE_TIMESTEP) {
       merged_timestep_ops(params, *cells, *tmp_cells, obstacles, 0);
-
       t_speed *cells_ptr = *cells;
       *cells = *tmp_cells;
       *tmp_cells = cells_ptr;
@@ -954,7 +950,7 @@ int merged_timestep_ops(const t_param params, t_speed* cells, t_speed* tmp_cells
 
       // COLLISION STUFF
       /* don't consider occupied cells */
-      if (!obstacles[ii + jj*params.nx])
+      else
       {
         /* compute local density total */
         float local_density = 0.f;
