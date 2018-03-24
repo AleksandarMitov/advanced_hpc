@@ -1044,24 +1044,26 @@ float merged_timestep_ops(const t_param params, t_speed* cells, t_speed* tmp_cel
                                                   + params.omega
                                                   * (d_equ[kk] - tmp_cells[ii + jj*params.nx].speeds[kk]);
         }
-        u_x = (tmp_cells[ii + jj*params.nx].speeds[1]
-                      + tmp_cells[ii + jj*params.nx].speeds[5]
-                      + tmp_cells[ii + jj*params.nx].speeds[8]
-                      - (tmp_cells[ii + jj*params.nx].speeds[3]
-                         + tmp_cells[ii + jj*params.nx].speeds[6]
-                         + tmp_cells[ii + jj*params.nx].speeds[7]))
-                     / local_density;
-        /* compute y velocity component */
-        u_y = (tmp_cells[ii + jj*params.nx].speeds[2]
-                      + tmp_cells[ii + jj*params.nx].speeds[5]
-                      + tmp_cells[ii + jj*params.nx].speeds[6]
-                      - (tmp_cells[ii + jj*params.nx].speeds[4]
-                         + tmp_cells[ii + jj*params.nx].speeds[7]
-                         + tmp_cells[ii + jj*params.nx].speeds[8]))
-                     / local_density;
+
         //AV VELOCITY CODE
         /* accumulate the norm of x- and y- velocity components */
         if(ii != 0 && ii != params.nx-1) {
+          u_x = (tmp_cells[ii + jj*params.nx].speeds[1]
+                        + tmp_cells[ii + jj*params.nx].speeds[5]
+                        + tmp_cells[ii + jj*params.nx].speeds[8]
+                        - (tmp_cells[ii + jj*params.nx].speeds[3]
+                           + tmp_cells[ii + jj*params.nx].speeds[6]
+                           + tmp_cells[ii + jj*params.nx].speeds[7]))
+                       / local_density;
+          /* compute y velocity component */
+          u_y = (tmp_cells[ii + jj*params.nx].speeds[2]
+                        + tmp_cells[ii + jj*params.nx].speeds[5]
+                        + tmp_cells[ii + jj*params.nx].speeds[6]
+                        - (tmp_cells[ii + jj*params.nx].speeds[4]
+                           + tmp_cells[ii + jj*params.nx].speeds[7]
+                           + tmp_cells[ii + jj*params.nx].speeds[8]))
+                       / local_density;
+
           tot_u += sqrtf((u_x * u_x) + (u_y * u_y));
         }
         //DONE AV_VELOCITY
