@@ -65,6 +65,7 @@ const int TEST = 1;
 const int ASYNC_HALOS = 1;
 const int SPREAD_COLS_EVENLY = 1;
 const int MERGE_TIMESTEP = 1;
+const int REDUCE_HALO_SPEED_ECHANGE = 1;
 
 /* struct to hold the parameter values */
 typedef struct
@@ -249,6 +250,8 @@ int main(int argc, char* argv[])
     printf("Number of processes: %d\n", size);
     if(ASYNC_HALOS) printf("Asynchronous halo exchange.\n");
     if(SPREAD_COLS_EVENLY) printf("Spreading remainder cols evenly.\n");
+    if(MERGE_TIMESTEP) printf("Merging propagate, rebound, collision and av_velocity.\n");
+    if(REDUCE_HALO_SPEED_ECHANGE) printf("Using reduced halo exchange.\n");
     /* initialise our data structures and load values from file */
     initialise(paramfile, obstaclefile, &params, &cells, &tmp_cells, &obstacles, &av_vels);
 
@@ -340,31 +343,54 @@ int main(int argc, char* argv[])
         MPI_Request* current_request = requests[i];
         MPI_Wait(current_request, MPI_STATUS_IGNORE);
       }
+      int speeds_to_recv = REDUCE_HALO_SPEED_ECHANGE ? 3 : NSPEEDS;
       //populate left col
       for(int row = 0; row < child_params.ny; ++row) {
         //t_speed speeds;
-        for(int speed = 0; speed < NSPEEDS; ++speed) {
-          //speeds.speeds[speed] = rbuffer_cells2[row*NSPEEDS + speed];
+        if(REDUCE_HALO_SPEED_ECHANGE) {
           if(MERGE_TIMESTEP) {
-              child_tmp_cells->speeds[speed][row*child_params.nx] = rbuffer_cells2[row*NSPEEDS + speed];
+            child_tmp_cells->speeds[1][row*child_params.nx] = rbuffer_cells2[row*speeds_to_recv + 0];
+            child_tmp_cells->speeds[5][row*child_params.nx] = rbuffer_cells2[row*speeds_to_recv + 1];
+            child_tmp_cells->speeds[8][row*child_params.nx] = rbuffer_cells2[row*speeds_to_recv + 2];
           } else {
-              child_cells->speeds[speed][row*child_params.nx] = rbuffer_cells2[row*NSPEEDS + speed];
+            child_cells->speeds[1][row*child_params.nx] = rbuffer_cells2[row*speeds_to_recv + 0];
+            child_cells->speeds[5][row*child_params.nx] = rbuffer_cells2[row*speeds_to_recv + 1];
+            child_cells->speeds[8][row*child_params.nx] = rbuffer_cells2[row*speeds_to_recv + 2];
           }
+        } else {
+            for(int speed = 0; speed < NSPEEDS; ++speed) {
+              //speeds.speeds[speed] = rbuffer_cells2[row*NSPEEDS + speed];
+              if(MERGE_TIMESTEP) {
+                  child_tmp_cells->speeds[speed][row*child_params.nx] = rbuffer_cells2[row*speeds_to_recv + speed];
+              } else {
+                  child_cells->speeds[speed][row*child_params.nx] = rbuffer_cells2[row*speeds_to_recv + speed];
+              }
+            }
         }
-
       }
       //populate right col
       for(int row = 0; row < child_params.ny; ++row) {
         //t_speed speeds;
-        for(int speed = 0; speed < NSPEEDS; ++speed) {
-          //speeds.speeds[speed] = rbuffer_cells1[row*NSPEEDS + speed];
+        if(REDUCE_HALO_SPEED_ECHANGE) {
           if(MERGE_TIMESTEP) {
-              child_tmp_cells->speeds[speed][row*child_params.nx + (child_params.nx - 1)] = rbuffer_cells1[row*NSPEEDS + speed];
+            child_tmp_cells->speeds[3][row*child_params.nx + (child_params.nx - 1)] = rbuffer_cells1[row*speeds_to_recv + 0];
+            child_tmp_cells->speeds[6][row*child_params.nx + (child_params.nx - 1)] = rbuffer_cells1[row*speeds_to_recv + 1];
+            child_tmp_cells->speeds[7][row*child_params.nx + (child_params.nx - 1)] = rbuffer_cells1[row*speeds_to_recv + 2];
           } else {
-              child_cells->speeds[speed][row*child_params.nx + (child_params.nx - 1)] = rbuffer_cells1[row*NSPEEDS + speed];
+            child_cells->speeds[3][row*child_params.nx + (child_params.nx - 1)] = rbuffer_cells1[row*speeds_to_recv + 0];
+            child_cells->speeds[6][row*child_params.nx + (child_params.nx - 1)] = rbuffer_cells1[row*speeds_to_recv + 1];
+            child_cells->speeds[7][row*child_params.nx + (child_params.nx - 1)] = rbuffer_cells1[row*speeds_to_recv + 2];
+          }
+        } else {
+          for(int speed = 0; speed < NSPEEDS; ++speed) {
+            //speeds.speeds[speed] = rbuffer_cells1[row*NSPEEDS + speed];
+            if(MERGE_TIMESTEP) {
+                child_tmp_cells->speeds[speed][row*child_params.nx + (child_params.nx - 1)] = rbuffer_cells1[row*speeds_to_recv + speed];
+            } else {
+                child_cells->speeds[speed][row*child_params.nx + (child_params.nx - 1)] = rbuffer_cells1[row*speeds_to_recv + speed];
+            }
           }
         }
-
       }
 
       //now do computations
@@ -559,25 +585,39 @@ void exchange_halos_async(MPI_Request** requests, int rank, int size, t_param ch
                       float* sbuffer_cells2, float* rbuffer_cells2) {
   int left = (rank == 0) ? (rank + size - 1) : (rank - 1); // left is bottom, right is top equiv
   int right = (rank + 1) % size;
-  MPI_Irecv(rbuffer_cells1, child_params.ny*NSPEEDS, MPI_FLOAT, right, 0, MPI_COMM_WORLD, requests[1]);
-  MPI_Irecv(rbuffer_cells2, child_params.ny*NSPEEDS, MPI_FLOAT, left, 0, MPI_COMM_WORLD, requests[3]);
+  int speeds_to_send = REDUCE_HALO_SPEED_ECHANGE ? 3 : NSPEEDS;
+  MPI_Irecv(rbuffer_cells1, child_params.ny*speeds_to_send, MPI_FLOAT, right, 0, MPI_COMM_WORLD, requests[1]);
+  MPI_Irecv(rbuffer_cells2, child_params.ny*speeds_to_send, MPI_FLOAT, left, 0, MPI_COMM_WORLD, requests[3]);
   //send to the left, receive from right
   //fill with left col
   for(int row = 0; row < child_params.ny; ++row) {
-    for(int speed = 0; speed < NSPEEDS; ++speed) {
-      sbuffer_cells1[row*NSPEEDS + speed] = child_cells->speeds[speed][row*child_params.nx + 1];
+    if(REDUCE_HALO_SPEED_ECHANGE) {
+        sbuffer_cells1[row*speeds_to_send + 0] = child_cells->speeds[3][row*child_params.nx + 1];
+        sbuffer_cells1[row*speeds_to_send + 1] = child_cells->speeds[6][row*child_params.nx + 1];
+        sbuffer_cells1[row*speeds_to_send + 2] = child_cells->speeds[7][row*child_params.nx + 1];
+    } else {
+      for(int speed = 0; speed < NSPEEDS; ++speed) {
+        sbuffer_cells1[row*speeds_to_send + speed] = child_cells->speeds[speed][row*child_params.nx + 1];
+      }
     }
+
   }
-  MPI_Isend(sbuffer_cells1, child_params.ny*NSPEEDS, MPI_FLOAT, left, 0, MPI_COMM_WORLD, requests[0]);
+  MPI_Isend(sbuffer_cells1, child_params.ny*speeds_to_send, MPI_FLOAT, left, 0, MPI_COMM_WORLD, requests[0]);
 
   //send to right, receive from left
   //fill with right col
   for(int row = 0; row < child_params.ny; ++row) {
-    for(int speed = 0; speed < NSPEEDS; ++speed) {
-      sbuffer_cells2[row*NSPEEDS + speed] = child_cells->speeds[speed][row*child_params.nx + (child_params.nx - 2)];
+    if(REDUCE_HALO_SPEED_ECHANGE) {
+      sbuffer_cells2[row*speeds_to_send + 0] = child_cells->speeds[1][row*child_params.nx + (child_params.nx - 2)];
+      sbuffer_cells2[row*speeds_to_send + 1] = child_cells->speeds[5][row*child_params.nx + (child_params.nx - 2)];
+      sbuffer_cells2[row*speeds_to_send + 2] = child_cells->speeds[8][row*child_params.nx + (child_params.nx - 2)];
+    } else {
+      for(int speed = 0; speed < NSPEEDS; ++speed) {
+        sbuffer_cells2[row*speeds_to_send + speed] = child_cells->speeds[speed][row*child_params.nx + (child_params.nx - 2)];
+      }
     }
   }
-  MPI_Isend(sbuffer_cells2, child_params.ny*NSPEEDS, MPI_FLOAT, right, 0, MPI_COMM_WORLD, requests[2]);
+  MPI_Isend(sbuffer_cells2, child_params.ny*speeds_to_send, MPI_FLOAT, right, 0, MPI_COMM_WORLD, requests[2]);
 
 }
 
