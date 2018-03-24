@@ -63,7 +63,7 @@
 #define AVVELSFILE      "av_vels.dat"
 const int TEST = 1;
 const int ASYNC_HALOS = 1;
-const int SPREAD_COLS_EVENLY = 1;
+const int SPREAD_COLS_EVENLY = 0;
 const int MERGE_TIMESTEP = 1;
 
 /* struct to hold the parameter values */
@@ -885,7 +885,7 @@ int propagate(const t_param params, t_speed* cells, t_speed* tmp_cells, int flag
   return EXIT_SUCCESS;
 }
 
-float merged_timestep_ops(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles, int flag) {
+float merged_timestep_ops(const t_param params, t_speed*restrict cells, t_speed*restrict tmp_cells, int*restrict obstacles, int flag) {
   // merge propagate, rebound, collision and av_velocity
   int start, end, increment;
   if(flag == 0) {
