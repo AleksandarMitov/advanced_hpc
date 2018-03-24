@@ -99,13 +99,13 @@ int initialise(const char* paramfile, const char* obstaclefile,
 ** accelerate_flow(), propagate(), rebound() & collision()
 */
 int timestep(const t_param params, t_speed** cells, t_speed** tmp_cells, int* obstacles, int flag);
-int timestep_async(const t_param params, t_speed** cells, t_speed** tmp_cells, int* obstacles, int flag,
+float timestep_async(const t_param params, t_speed** cells, t_speed** tmp_cells, int* obstacles, int flag,
                                            t_speed *tmp_cells2, int total_requests, MPI_Request ** requests);
 int accelerate_flow(const t_param params, t_speed* cells, int* obstacles, int flag);
 int propagate(const t_param params, t_speed* cells, t_speed* tmp_cells, int flag);
 int rebound(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles, int flag);
 int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles, int flag);
-int merged_timestep_ops(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles, int flag);
+float merged_timestep_ops(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles, int flag);
 
 int write_values(const t_param params, t_speed* cells, int* obstacles, float* av_vels);
 void initialise_params_from_file(const char* paramfile, t_param* params);
@@ -321,8 +321,13 @@ int main(int argc, char* argv[])
 
       //now do computations
       //timestep(child_params, &child_cells, &child_tmp_cells, child_obstacles, 0);
-      timestep_async(child_params, &child_cells, &child_tmp_cells, child_obstacles, 0, old_cell_vals, total_requests, requests);
-      child_vels[tt] = av_velocity(child_params, child_cells, child_obstacles, 0);
+      if(MERGE_TIMESTEP) {
+        child_vels[tt] = timestep_async(child_params, &child_cells, &child_tmp_cells, child_obstacles, 0, old_cell_vals, total_requests, requests);
+      } else {
+        timestep_async(child_params, &child_cells, &child_tmp_cells, child_obstacles, 0, old_cell_vals, total_requests, requests);
+        child_vels[tt] = av_velocity(child_params, child_cells, child_obstacles, 0);
+      }
+
       //synchronise
       for(int i = 0; i < total_requests; ++i) {
         MPI_Request* current_request = requests[i];
@@ -355,8 +360,12 @@ int main(int argc, char* argv[])
 
       //now do computations
       //timestep(child_params, &child_cells, &child_tmp_cells, child_obstacles, 1);
-      timestep_async(child_params, &child_cells, &child_tmp_cells, child_obstacles, 1, old_cell_vals, total_requests, requests);
-      child_vels[tt] += av_velocity(child_params, child_cells, child_obstacles, 1);
+      if(MERGE_TIMESTEP) {
+        child_vels[tt] += timestep_async(child_params, &child_cells, &child_tmp_cells, child_obstacles, 1, old_cell_vals, total_requests, requests);
+      } else {
+        timestep_async(child_params, &child_cells, &child_tmp_cells, child_obstacles, 1, old_cell_vals, total_requests, requests);
+        child_vels[tt] += av_velocity(child_params, child_cells, child_obstacles, 1);
+      }
     }
 
 #ifdef DEBUG
@@ -713,13 +722,14 @@ int timestep(const t_param params, t_speed** cells, t_speed** tmp_cells, int* ob
   return EXIT_SUCCESS;
 }
 
-int timestep_async(const t_param params, t_speed** cells, t_speed** tmp_cells, int* obstacles, int flag, t_speed *tmp_cells2, int total_requests, MPI_Request **requests)
+float timestep_async(const t_param params, t_speed** cells, t_speed** tmp_cells, int* obstacles, int flag, t_speed *tmp_cells2, int total_requests, MPI_Request **requests)
 {
+  float res = -1;
   if(flag == 0) {
     accelerate_flow(params, *cells, obstacles, 0);
 
     if(MERGE_TIMESTEP) {
-      merged_timestep_ops(params, *cells, *tmp_cells, obstacles, 0);
+      res = merged_timestep_ops(params, *cells, *tmp_cells, obstacles, 0);
       t_speed *cells_ptr = *cells;
       *cells = *tmp_cells;
       *tmp_cells = cells_ptr;
@@ -739,7 +749,7 @@ int timestep_async(const t_param params, t_speed** cells, t_speed** tmp_cells, i
 
     if(MERGE_TIMESTEP) {
       accelerate_flow(params, *tmp_cells, obstacles, 1);
-      merged_timestep_ops(params, *tmp_cells, *cells, obstacles, 1);
+      res = merged_timestep_ops(params, *tmp_cells, *cells, obstacles, 1);
 
     } else {
       //swap vals
@@ -765,7 +775,7 @@ int timestep_async(const t_param params, t_speed** cells, t_speed** tmp_cells, i
 
   } else {
     accelerate_flow(params, *cells, obstacles, flag);
-    merged_timestep_ops(params, *cells, *tmp_cells, obstacles, flag);
+    res = merged_timestep_ops(params, *cells, *tmp_cells, obstacles, flag);
     t_speed *cells_ptr = *cells;
     *cells = *tmp_cells;
     *tmp_cells = cells_ptr;
@@ -773,7 +783,7 @@ int timestep_async(const t_param params, t_speed** cells, t_speed** tmp_cells, i
     //rebound(params, cells, tmp_cells, obstacles, flag);
     //collision(params, cells, tmp_cells, obstacles, flag);
   }
-  return EXIT_SUCCESS;
+  return res;
 }
 
 int accelerate_flow(const t_param params, t_speed* cells, int* obstacles, int flag)
@@ -875,7 +885,7 @@ int propagate(const t_param params, t_speed* cells, t_speed* tmp_cells, int flag
   return EXIT_SUCCESS;
 }
 
-int merged_timestep_ops(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles, int flag) {
+float merged_timestep_ops(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles, int flag) {
   // merge propagate, rebound, collision and av_velocity
   int start, end, increment;
   if(flag == 0) {
@@ -896,7 +906,7 @@ int merged_timestep_ops(const t_param params, t_speed* cells, t_speed* tmp_cells
   const float w0 = 4.f / 9.f;  /* weighting factor */
   const float w1 = 1.f / 9.f;  /* weighting factor */
   const float w2 = 1.f / 36.f; /* weighting factor */
-
+  float tot_u = 0.f;         /* accumulated magnitudes of velocity for each cell */
   /* loop over _all_ cells */
   for (int jj = 0; jj < params.ny; jj++)
   {
@@ -1034,6 +1044,27 @@ int merged_timestep_ops(const t_param params, t_speed* cells, t_speed* tmp_cells
                                                   + params.omega
                                                   * (d_equ[kk] - tmp_cells[ii + jj*params.nx].speeds[kk]);
         }
+        u_x = (tmp_cells[ii + jj*params.nx].speeds[1]
+                      + tmp_cells[ii + jj*params.nx].speeds[5]
+                      + tmp_cells[ii + jj*params.nx].speeds[8]
+                      - (tmp_cells[ii + jj*params.nx].speeds[3]
+                         + tmp_cells[ii + jj*params.nx].speeds[6]
+                         + tmp_cells[ii + jj*params.nx].speeds[7]))
+                     / local_density;
+        /* compute y velocity component */
+        u_y = (tmp_cells[ii + jj*params.nx].speeds[2]
+                      + tmp_cells[ii + jj*params.nx].speeds[5]
+                      + tmp_cells[ii + jj*params.nx].speeds[6]
+                      - (tmp_cells[ii + jj*params.nx].speeds[4]
+                         + tmp_cells[ii + jj*params.nx].speeds[7]
+                         + tmp_cells[ii + jj*params.nx].speeds[8]))
+                     / local_density;
+        //AV VELOCITY CODE
+        /* accumulate the norm of x- and y- velocity components */
+        if(ii != 0 && ii != params.nx-1) {
+          tot_u += sqrtf((u_x * u_x) + (u_y * u_y));
+        }
+        //DONE AV_VELOCITY
       }
       // COLLISION DONE
 
@@ -1046,7 +1077,7 @@ int merged_timestep_ops(const t_param params, t_speed* cells, t_speed* tmp_cells
     }
   }
 
-  return EXIT_SUCCESS;
+  return tot_u;
 }
 
 int rebound(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles, int flag)
