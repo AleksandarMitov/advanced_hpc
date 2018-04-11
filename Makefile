@@ -1,6 +1,6 @@
 # Makefile
 
-EXE=d2q9-bgk
+EXE=d2q9-bgk_orig
 
 CC=mpicc
 CFLAGS= -std=c99 -Wall -O3
