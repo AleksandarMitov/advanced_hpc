@@ -62,7 +62,7 @@
 #define FINALSTATEFILE  "final_state.dat"
 #define AVVELSFILE      "av_vels.dat"
 const int TEST = 1;
-const int ASYNC_HALOS = 1;
+const int ASYNC_HALOS = 0;
 const int SPREAD_COLS_EVENLY = 1;
 const int MERGE_TIMESTEP = 1;
 const int REDUCE_HALO_SPEED_ECHANGE = 1;
