@@ -1,0 +1,38 @@
+Running on host compute148.bc4.acrc.priv
+Time is Fri Apr 27 18:48:48 BST 2018
+Directory is /mnt/storage/home/am15249/advanced_hpc
+Slurm job ID is 1127244
+This job runs on the following machines:
+compute[148-150,396]
+Number of processes: 112
+Asynchronous halo exchange.
+Spreading remainder cols evenly.
+Merging propagate, rebound, collision and av_velocity.
+Using reduced halo exchange.
+iteration: 0
+==timestep: 0==
+av velocity: 7.523485692218E-04
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+slurmstepd: error: *** STEP 1127244.0 ON compute148 CANCELLED AT 2018-04-27T18:51:02 DUE TO TIME LIMIT ***
+slurmstepd: error: *** JOB 1127244 ON compute148 CANCELLED AT 2018-04-27T18:51:02 DUE TO TIME LIMIT ***
+srun: got SIGCONT
+srun: forcing job termination
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   PID 15019 RUNNING AT compute148
+=   EXIT CODE: 15
+=   CLEANING UP REMAINING PROCESSES
+=   YOU CAN IGNORE THE BELOW CLEANUP MESSAGES
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   PID 15019 RUNNING AT compute148
+=   EXIT CODE: 15
+=   CLEANING UP REMAINING PROCESSES
+=   YOU CAN IGNORE THE BELOW CLEANUP MESSAGES
+===================================================================================
+   Intel(R) MPI Library troubleshooting guide:
+      https://software.intel.com/node/561764
+===================================================================================

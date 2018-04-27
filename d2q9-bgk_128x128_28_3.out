@@ -1,0 +1,19 @@
+Running on host compute151.bc4.acrc.priv
+Time is Fri Apr 27 17:48:45 UTC 2018
+Directory is /mnt/storage/home/am15249/advanced_hpc
+Slurm job ID is 1127243
+This job runs on the following machines:
+compute[151-152,395]
+Number of processes: 84
+Asynchronous halo exchange.
+Spreading remainder cols evenly.
+Merging propagate, rebound, collision and av_velocity.
+Using reduced halo exchange.
+iteration: 0
+==timestep: 0==
+av velocity: 7.523485692218E-04
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+slurmstepd: error: *** STEP 1127243.0 ON compute151 CANCELLED AT 2018-04-27T17:51:02 DUE TO TIME LIMIT ***
+slurmstepd: error: *** JOB 1127243 ON compute151 CANCELLED AT 2018-04-27T17:51:02 DUE TO TIME LIMIT ***
+srun: got SIGCONT
+srun: forcing job termination

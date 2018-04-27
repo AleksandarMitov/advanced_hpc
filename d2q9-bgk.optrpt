@@ -114,6 +114,7 @@ INLINE REPORT: (main(int, char **)) [1/32=3.1%] d2q9-bgk.c(160,1)
     -> EXTERN: (627,39) calloc(size_t, size_t)
   -> EXTERN: (247,31) malloc(size_t)
   -> EXTERN: (250,5) printf(const char *__restrict__, ...)
+  -> EXTERN: (251,21) printf(const char *__restrict__, ...)
   -> EXTERN: (252,28) printf(const char *__restrict__, ...)
   -> EXTERN: (253,24) printf(const char *__restrict__, ...)
   -> EXTERN: (254,35) printf(const char *__restrict__, ...)
@@ -582,58 +583,60 @@ LOOP BEGIN at d2q9-bgk.c(577,3) inlined into d2q9-bgk.c(300,3)
 LOOP END
 
 LOOP BEGIN at d2q9-bgk.c(310,3)
-   remark #15523: loop was not vectorized: loop control variable tt was found, but loop iteration count cannot be computed before executing the loop
+   remark #15541: outer loop was not auto-vectorized: consider using SIMD directive
 
-   LOOP BEGIN at d2q9-bgk.c(645,3) inlined into d2q9-bgk.c(318,7)
+   LOOP BEGIN at d2q9-bgk.c(593,3) inlined into d2q9-bgk.c(328,7)
       remark #15344: loop was not vectorized: vector dependence prevents vectorization
-      remark #15346: vector dependence: assumed FLOW dependence between sbuffer_cells1[row*9+speed] (647:7) and child_cells->speeds[speed][row*child_params.nx+1] (647:7)
-      remark #15346: vector dependence: assumed ANTI dependence between child_cells->speeds[speed][row*child_params.nx+1] (647:7) and sbuffer_cells1[row*9+speed] (647:7)
-
-      LOOP BEGIN at d2q9-bgk.c(646,5) inlined into d2q9-bgk.c(318,7)
-         remark #15344: loop was not vectorized: vector dependence prevents vectorization
-         remark #15346: vector dependence: assumed FLOW dependence between sbuffer_cells1[row*9+speed] (647:7) and child_cells->speeds[speed][row*child_params.nx+1] (647:7)
-         remark #15346: vector dependence: assumed ANTI dependence between child_cells->speeds[speed][row*child_params.nx+1] (647:7) and sbuffer_cells1[row*9+speed] (647:7)
-         remark #25436: completely unrolled by 9  
-      LOOP END
+      remark #15346: vector dependence: assumed FLOW dependence between sbuffer_cells1[row*3] (595:9) and child_cells->speeds[7][row*child_params.nx+1] (597:9)
+      remark #15346: vector dependence: assumed ANTI dependence between child_cells->speeds[7][row*child_params.nx+1] (597:9) and sbuffer_cells1[row*3] (595:9)
+      remark #25439: unrolled with remainder by 2  
    LOOP END
 
-   LOOP BEGIN at d2q9-bgk.c(654,3) inlined into d2q9-bgk.c(318,7)
-      remark #15344: loop was not vectorized: vector dependence prevents vectorization
-      remark #15346: vector dependence: assumed OUTPUT dependence between child_cells->speeds[speed][row*child_params.nx+child_params.nx-1 (657:7) and child_cells->speeds[speed][row*child_params.nx+child_params.nx-1 (657:7)
-      remark #15346: vector dependence: assumed OUTPUT dependence between child_cells->speeds[speed][row*child_params.nx+child_params.nx-1 (657:7) and child_cells->speeds[speed][row*child_params.nx+child_params.nx-1 (657:7)
-
-      LOOP BEGIN at d2q9-bgk.c(656,5) inlined into d2q9-bgk.c(318,7)
-         remark #15344: loop was not vectorized: vector dependence prevents vectorization
-         remark #15346: vector dependence: assumed FLOW dependence between child_cells->speeds[speed][row*child_params.nx+child_params.nx-1 (657:7) and rbuffer_cells1[row*9+speed] (657:7)
-         remark #15346: vector dependence: assumed ANTI dependence between rbuffer_cells1[row*9+speed] (657:7) and child_cells->speeds[speed][row*child_params.nx+child_params.nx-1 (657:7)
-         remark #25436: completely unrolled by 9  
-      LOOP END
+   LOOP BEGIN at d2q9-bgk.c(593,3) inlined into d2q9-bgk.c(328,7)
+   <Remainder>
    LOOP END
 
-   LOOP BEGIN at d2q9-bgk.c(664,3) inlined into d2q9-bgk.c(318,7)
+   LOOP BEGIN at d2q9-bgk.c(609,3) inlined into d2q9-bgk.c(328,7)
       remark #15344: loop was not vectorized: vector dependence prevents vectorization
-      remark #15346: vector dependence: assumed FLOW dependence between sbuffer_cells1[row*9+speed] (666:7) and child_cells->speeds[speed][row*child_params.nx+child_params.nx-2 (666:7)
-      remark #15346: vector dependence: assumed ANTI dependence between child_cells->speeds[speed][row*child_params.nx+child_params.nx-2 (666:7) and sbuffer_cells1[row*9+speed] (666:7)
-
-      LOOP BEGIN at d2q9-bgk.c(665,5) inlined into d2q9-bgk.c(318,7)
-         remark #15344: loop was not vectorized: vector dependence prevents vectorization
-         remark #15346: vector dependence: assumed FLOW dependence between sbuffer_cells1[row*9+speed] (666:7) and child_cells->speeds[speed][row*child_params.nx+child_params.nx-2 (666:7)
-         remark #15346: vector dependence: assumed ANTI dependence between child_cells->speeds[speed][row*child_params.nx+child_params.nx-2 (666:7) and sbuffer_cells1[row*9+speed] (666:7)
-         remark #25436: completely unrolled by 9  
-      LOOP END
+      remark #15346: vector dependence: assumed FLOW dependence between sbuffer_cells2[row*3] (611:7) and child_cells->speeds[8][row*child_params.nx+child_params.nx-2] (613:7)
+      remark #15346: vector dependence: assumed ANTI dependence between child_cells->speeds[8][row*child_params.nx+child_params.nx-2] (613:7) and sbuffer_cells2[row*3] (611:7)
+      remark #25439: unrolled with remainder by 2  
    LOOP END
 
-   LOOP BEGIN at d2q9-bgk.c(672,3) inlined into d2q9-bgk.c(318,7)
-      remark #15344: loop was not vectorized: vector dependence prevents vectorization
-      remark #15346: vector dependence: assumed OUTPUT dependence between child_cells->speeds[speed][row*child_params.nx] (676:7) and child_cells->speeds[speed][row*child_params.nx] (676:7)
-      remark #15346: vector dependence: assumed OUTPUT dependence between child_cells->speeds[speed][row*child_params.nx] (676:7) and child_cells->speeds[speed][row*child_params.nx] (676:7)
+   LOOP BEGIN at d2q9-bgk.c(609,3) inlined into d2q9-bgk.c(328,7)
+   <Remainder>
+   LOOP END
 
-      LOOP BEGIN at d2q9-bgk.c(674,5) inlined into d2q9-bgk.c(318,7)
-         remark #15344: loop was not vectorized: vector dependence prevents vectorization
-         remark #15346: vector dependence: assumed FLOW dependence between child_cells->speeds[speed][row*child_params.nx] (676:7) and rbuffer_cells1[row*9+speed] (676:7)
-         remark #15346: vector dependence: assumed ANTI dependence between rbuffer_cells1[row*9+speed] (676:7) and child_cells->speeds[speed][row*child_params.nx] (676:7)
-         remark #25436: completely unrolled by 9  
-      LOOP END
+   LOOP BEGIN at d2q9-bgk.c(342,7)
+      remark #15382: vectorization support: call to function MPI_Wait(MPI_Request *, MPI_Status *) cannot be vectorized   [ d2q9-bgk.c(344,9) ]
+      remark #15344: loop was not vectorized: vector dependence prevents vectorization
+   LOOP END
+
+   LOOP BEGIN at d2q9-bgk.c(348,7)
+      remark #15344: loop was not vectorized: vector dependence prevents vectorization
+      remark #15346: vector dependence: assumed OUTPUT dependence between child_tmp_cells->speeds[1][row*child_params.nx] (352:13) and child_tmp_cells->speeds[8][row*child_params.nx] (354:13)
+      remark #15346: vector dependence: assumed OUTPUT dependence between child_tmp_cells->speeds[8][row*child_params.nx] (354:13) and child_tmp_cells->speeds[1][row*child_params.nx] (352:13)
+      remark #25439: unrolled with remainder by 2  
+   LOOP END
+
+   LOOP BEGIN at d2q9-bgk.c(348,7)
+   <Remainder>
+   LOOP END
+
+   LOOP BEGIN at d2q9-bgk.c(372,7)
+      remark #15344: loop was not vectorized: vector dependence prevents vectorization
+      remark #15346: vector dependence: assumed OUTPUT dependence between child_tmp_cells->speeds[3][row*child_params.nx+child_params.nx-1 (376:13) and child_tmp_cells->speeds[7][row*child_params.nx+child_params.nx-1 (378:13)
+      remark #15346: vector dependence: assumed OUTPUT dependence between child_tmp_cells->speeds[7][row*child_params.nx+child_params.nx-1 (378:13) and child_tmp_cells->speeds[3][row*child_params.nx+child_params.nx-1 (376:13)
+      remark #25439: unrolled with remainder by 2  
+   LOOP END
+
+   LOOP BEGIN at d2q9-bgk.c(372,7)
+   <Remainder>
+   LOOP END
+
+   LOOP BEGIN at d2q9-bgk.c(325,7)
+      remark #15527: loop was not vectorized: function call to malloc(size_t) cannot be vectorized   [ d2q9-bgk.c(326,38) ]
+      remark #25436: completely unrolled by 4  
    LOOP END
 LOOP END
 
@@ -875,10 +878,10 @@ LOOP END
 
 d2q9-bgk.c(1520,9):remark #34014: optimization advice for memset: increase the destination's alignment to 16 (and use __assume_aligned) to speed up library implementation
 d2q9-bgk.c(1520,9):remark #34026: call to memset implemented as a call to optimized library version
-d2q9-bgk.c(321,7):remark #34014: optimization advice for memcpy: increase the destination's alignment to 16 (and use __assume_aligned) to increase the width of stores
-d2q9-bgk.c(321,7):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (16, 0), and destination (alignment, offset): (1, 0)
-d2q9-bgk.c(322,24):remark #34014: optimization advice for memcpy: increase the destination's alignment to 16 (and use __assume_aligned) to increase the width of stores
-d2q9-bgk.c(322,24):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (16, 0), and destination (alignment, offset): (1, 0)
+d2q9-bgk.c(335,26):remark #34014: optimization advice for memcpy: increase the destination's alignment to 16 (and use __assume_aligned) to increase the width of stores
+d2q9-bgk.c(335,26):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (16, 0), and destination (alignment, offset): (1, 0)
+d2q9-bgk.c(399,27):remark #34014: optimization advice for memcpy: increase the destination's alignment to 16 (and use __assume_aligned) to increase the width of stores
+d2q9-bgk.c(399,27):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (16, 0), and destination (alignment, offset): (1, 0)
 d2q9-bgk.c(160,1):remark #34051: REGISTER ALLOCATION : [main] d2q9-bgk.c:160
 
     Hardware registers
@@ -888,19 +891,19 @@ d2q9-bgk.c(160,1):remark #34051: REGISTER ALLOCATION : [main] d2q9-bgk.c:160
         Assigned     :   25[ rax rdx rcx rbx rsi rdi r8-r15 zmm0-zmm10]
         
     Routine temporaries
-        Total         :    2240
-            Global    :     568
-            Local     :    1672
-        Regenerable   :     593
-        Spilled       :     128
+        Total         :    2324
+            Global    :     582
+            Local     :    1742
+        Regenerable   :     610
+        Spilled       :     122
         
     Routine stack
         Variables     :    3484 bytes*
-            Reads     :     119 [2.56e+02 ~ 0.7%]
+            Reads     :     118 [2.70e+02 ~ 0.8%]
             Writes    :      25 [1.34e+01 ~ 0.0%]
-        Spills        :     960 bytes*
-            Reads     :     350 [2.10e+03 ~ 5.8%]
-            Writes    :     197 [5.69e+02 ~ 1.6%]
+        Spills        :     888 bytes*
+            Reads     :     350 [1.82e+03 ~ 5.1%]
+            Writes    :     156 [5.46e+02 ~ 1.5%]
     
     Notes
     

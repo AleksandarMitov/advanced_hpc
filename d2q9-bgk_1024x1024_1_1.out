@@ -1,0 +1,110 @@
+Running on host compute087.bc4.acrc.priv
+Time is Fri Apr 27 18:12:00 BST 2018
+Directory is /mnt/storage/home/am15249/advanced_hpc
+Slurm job ID is 1127225
+This job runs on the following machines:
+compute087
+Number of processes: 1
+Asynchronous halo exchange.
+Spreading remainder cols evenly.
+Merging propagate, rebound, collision and av_velocity.
+Using reduced halo exchange.
+iteration: 0
+==timestep: 0==
+av velocity: 2.831012487411E+00
+==timestep: 1==
+av velocity: 5.005664348602E+00
+==timestep: 2==
+av velocity: 6.953393936157E+00
+==timestep: 3==
+av velocity: 9.121845245361E+00
+==timestep: 4==
+av velocity: 1.149441242218E+01
+==timestep: 5==
+av velocity: 1.355041694641E+01
+==timestep: 6==
+av velocity: 1.549272251129E+01
+==timestep: 7==
+av velocity: 1.724110984802E+01
+==timestep: 8==
+av velocity: 1.878449058533E+01
+==timestep: 9==
+av velocity: 2.049807929993E+01
+==timestep: 10==
+av velocity: 2.201515007019E+01
+==timestep: 11==
+av velocity: 2.371291160583E+01
+==timestep: 12==
+av velocity: 2.558085632324E+01
+==timestep: 13==
+av velocity: 2.689016342163E+01
+==timestep: 14==
+av velocity: 2.789505195618E+01
+==timestep: 15==
+av velocity: 2.913853454590E+01
+==timestep: 16==
+av velocity: 3.054550933838E+01
+==timestep: 17==
+av velocity: 3.213578796387E+01
+==timestep: 18==
+av velocity: 3.361880111694E+01
+==timestep: 19==
+av velocity: 3.484076309204E+01
+iteration: 500
+==timestep: 500==
+av velocity: 5.885874023438E+02
+iteration: 1000
+==timestep: 1000==
+av velocity: 1.071361938477E+03
+iteration: 1500
+==timestep: 1500==
+av velocity: 1.402768798828E+03
+iteration: 2000
+==timestep: 2000==
+av velocity: 1.493551513672E+03
+iteration: 2500
+==timestep: 2500==
+av velocity: 1.511004516602E+03
+iteration: 3000
+==timestep: 3000==
+av velocity: 1.842380859375E+03
+iteration: 3500
+==timestep: 3500==
+av velocity: 1.933185058594E+03
+iteration: 4000
+==timestep: 4000==
+av velocity: 2.087897216797E+03
+iteration: 4500
+==timestep: 4500==
+av velocity: 2.054259521484E+03
+iteration: 5000
+==timestep: 5000==
+av velocity: 2.202800537109E+03
+iteration: 5500
+==timestep: 5500==
+av velocity: 2.339362548828E+03
+iteration: 6000
+==timestep: 6000==
+av velocity: 2.414106689453E+03
+iteration: 6500
+==timestep: 6500==
+av velocity: 2.572995117188E+03
+iteration: 7000
+==timestep: 7000==
+av velocity: 2.585634277344E+03
+iteration: 7500
+==timestep: 7500==
+av velocity: 2.679197509766E+03
+iteration: 8000
+==timestep: 8000==
+av velocity: 2.723768310547E+03
+iteration: 8500
+==timestep: 8500==
+av velocity: 2.939994628906E+03
+iteration: 9000
+==timestep: 9000==
+av velocity: 3.027315429688E+03
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+slurmstepd: error: *** STEP 1127225.0 ON compute087 CANCELLED AT 2018-04-27T18:27:29 DUE TO TIME LIMIT ***
+slurmstepd: error: *** JOB 1127225 ON compute087 CANCELLED AT 2018-04-27T18:27:29 DUE TO TIME LIMIT ***
+/tmp/slurmd/job1127225/slurm_script: line 19:  2612 Terminated              mpirun ./d2q9-bgk ./input_1024x1024.params ./obstacles_1024x1024.dat
