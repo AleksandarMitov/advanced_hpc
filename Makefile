@@ -2,8 +2,8 @@
 
 EXE=d2q9-bgk
 
-CC=mpiicc
-CFLAGS= -std=c99 -Wall -O3
+CC=mpicc
+CFLAGS= -std=c99 -Wall -O3 -fopenmp
 LIBS = -lm
 
 FINAL_STATE_FILE=./final_state.dat
@@ -13,7 +13,7 @@ REF_AV_VELS_FILE=check/128x128.av_vels.dat
 
 all: $(EXE)
 
-$(EXE): $(EXE).c
+$(EXE): $(EXE)_gpu.c
 	$(CC) $(CFLAGS) $^ $(LIBS) -o $@
 
 check:
