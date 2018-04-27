@@ -2,7 +2,7 @@
 
 EXE=d2q9-bgk
 
-CC=mpicc
+CC=mpiicc
 CFLAGS= -std=c99 -Wall -O3
 LIBS = -lm
 
