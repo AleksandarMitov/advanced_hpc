@@ -1,9 +1,9 @@
-Running on host compute395.bc4.acrc.priv
-Time is Fri Apr 27 18:48:10 BST 2018
+Running on host compute140.bc4.acrc.priv
+Time is Fri Apr 27 20:21:01 BST 2018
 Directory is /mnt/storage/home/am15249/advanced_hpc
-Slurm job ID is 1127234
+Slurm job ID is 1127292
 This job runs on the following machines:
-compute[395-396,400,424]
+compute[140,147,160,458]
 Number of processes: 112
 Asynchronous halo exchange.
 Spreading remainder cols evenly.
@@ -168,6 +168,6 @@ iteration: 19500
 ==timestep: 19500==
 av velocity: 7.399496078491E+00
 ==done==
-Elapsed time:			14.715800 (s)
-Elapsed user CPU time:		14.599036 (s)
-Elapsed system CPU time:	0.125991 (s)
+Elapsed time:			15.610110 (s)
+Elapsed user CPU time:		13.616002 (s)
+Elapsed system CPU time:	0.127009 (s)
