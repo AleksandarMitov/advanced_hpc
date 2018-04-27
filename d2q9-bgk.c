@@ -87,7 +87,7 @@ typedef struct
 
 typedef struct
 {
-  float* speeds[NSPEEDS];
+  float* restrict speeds[NSPEEDS];
 } t_speed_arrays;
 
 /*
