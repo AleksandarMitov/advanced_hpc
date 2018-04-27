@@ -2,9 +2,9 @@
 import subprocess
 
 jobs = [
-"jb1_1", "jb28_1", "jb28_2", "jb28_3", "jb_28_4",
-"jm1_1", "jm28_1", "jm28_2", "jm28_3", "jm_28_4",
-"js1_1", "js28_1", "js28_2", "js28_3", "js_28_4",
+"jb1_1", "jb28_1", "jb28_2", "jb28_3", "jb28_4",
+"jm1_1", "jm28_1", "jm28_2", "jm28_3", "jm28_4",
+"js1_1", "js28_1", "js28_2", "js28_3", "js28_4",
 ]
 
 def hello_command(name, print_counter=False, repeat=10):
