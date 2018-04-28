@@ -742,6 +742,7 @@ float merged_timestep_ops(const t_param params, t_speed_arrays*restrict cells, t
   /* loop over _all_ cells */
   for (int jj = 0; jj < params.ny; jj++)
   {
+    #pragma omp target teams distribute parallel for simd
     for (int ii = start; ii < end; ii += increment)
     {
 
