@@ -702,7 +702,7 @@ float merged_timestep_ops(const t_param params, t_speed_arrays*restrict cells, t
   float *gt = tmp_cells->speeds[6];
   float *ht = tmp_cells->speeds[7];
   float *it = tmp_cells->speeds[8];
-  int N = child_params.nx * child_params.ny;
+  int N = params.nx * params.ny;
   // merge propagate, rebound, collision and av_velocity
   int start, end, increment;
     start = 0;
@@ -716,7 +716,7 @@ float merged_timestep_ops(const t_param params, t_speed_arrays*restrict cells, t
   const float w2 = 1.f / 36.f; /* weighting factor */
   float tot_u = 0.f;         /* accumulated magnitudes of velocity for each cell */
   /* loop over _all_ cells */
-  #pragma omp target enter data map(to: a[0:N], b[0:N],c[0:N],d[0:N],e[0:N],f[0:g],) \
+  #pragma omp target enter data map(to: a[0:N], b[0:N],c[0:N],d[0:N],e[0:N],f[0:N],g[0:N]) \
     h[0:N],i[0:N],at[0:N],bt[0:N],ct[0:N],dt[0:N],et[0:N],ft[0:N],gt[0:N],ht[0:N],it[0:N])
   for (int jj = 0; jj < params.ny; jj++)
   {
@@ -984,7 +984,7 @@ float merged_timestep_ops(const t_param params, t_speed_arrays*restrict cells, t
 
     }
   }
-  #pragma omp target exit data map(from: a[0:N], b[0:N],c[0:N],d[0:N],e[0:N],f[0:g],) \
+  #pragma omp target exit data map(from: a[0:N], b[0:N],c[0:N],d[0:N],e[0:N],f[0:N],g[0:N]) \
     h[0:N],i[0:N],at[0:N],bt[0:N],ct[0:N],dt[0:N],et[0:N],ft[0:N],gt[0:N],ht[0:N],it[0:N])
   return tot_u;
 }
