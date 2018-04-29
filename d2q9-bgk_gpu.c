@@ -54,6 +54,7 @@ int initialise(const char* paramfile, const char* obstaclefile,
 ** timestep calls, in order, the functions:
 ** accelerate_flow(), propagate(), rebound() & collision()
 */
+#pragma omp declare target
 int timestep(const t_param params, int* obstacles, int flag,
   float *a,float *b,float *c,float *d,float *e,float *f,float *g,float *h,float *i,
   float *at,float *bt,float *ct,float *dt,float *et,float *ft,float *gt,float *ht,float *it);
@@ -62,6 +63,14 @@ float *b,float *c,float *d,float *e,float *f,float *g,float *h,float *i);
 float merged_timestep_ops(const t_param params, int*restrict obstacles, int flag,
     float *a, float *b,float *c,float *d,float *e,float *f,float *g,float *h,float *i,
     float *at, float *bt,float *ct,float *dt,float *et,float *ft,float *gt,float *ht,float *it);
+    /* compute average velocity */
+    float av_velocity(const t_param params, int* obstacles, int flag,
+        float* a,float* b,float* c,float* d,float* e,float* f,float* g,float* h,float* i);
+        void exchange_halos(int rank, int size, t_param child_params,
+              float* sbuffer_cells, float* rbuffer_cells,
+              float* a,float* b,float* c,float* d,float* e,float* f,float* g,float* h,float* i);
+#pragma omp end declare target
+
 int write_values(const t_param params, t_speed_arrays* cells, int* obstacles, float* av_vels);
 void initialise_params_from_file(const char* paramfile, t_param* params);
 
@@ -73,9 +82,7 @@ int finalise(const t_param* params, t_speed_arrays** cells_ptr, t_speed_arrays**
 ** The total should remain constant from one timestep to the next. */
 float total_density(const t_param params, t_speed_arrays* cells);
 
-/* compute average velocity */
-float av_velocity(const t_param params, int* obstacles, int flag,
-    float* a,float* b,float* c,float* d,float* e,float* f,float* g,float* h,float* i);
+
 
 /* calculate Reynolds number */
 float calc_reynolds(const t_param params, t_speed_arrays* cells, int* obstacles);
@@ -88,9 +95,7 @@ void output_state(const char* output_file, int step, t_speed_arrays *cells, int 
 void test_vels(const char* output_file, float *vels, int steps);
 void exchange_obstacles(int rank, int size, t_param child_params, int *child_obstacles,
                       int* sbuffer_obstacles, int* rbuffer_obstacles);
-void exchange_halos(int rank, int size, t_param child_params,
-      float* sbuffer_cells, float* rbuffer_cells,
-      float* a,float* b,float* c,float* d,float* e,float* f,float* g,float* h,float* i);
+
 void exchange_halos_async(MPI_Request** requests, int rank, int size, t_param child_params, t_speed_arrays *child_cells,
                       float* sbuffer_cells1, float* rbuffer_cells1,
                       float* sbuffer_cells2, float* rbuffer_cells2);
