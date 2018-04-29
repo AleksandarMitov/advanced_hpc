@@ -304,8 +304,8 @@ int main(int argc, char* argv[])
 
       if(rank == 0 && tt == 0) printf("Flag: 2\n");
       //Exchange halos
-      exchange_halos(rank, size, child_params, sbuffer_cells1, rbuffer_cells1,
-                                                              a,b,c,d,e,f,g,h,i);
+      //exchange_halos(rank, size, child_params, sbuffer_cells1, rbuffer_cells1,
+      //                                                        a,b,c,d,e,f,g,h,i);
       //now do computations
       //timestep(child_params, &child_cells, &child_tmp_cells, child_obstacles, 2);
       timestep(child_params, child_obstacles, 2,
