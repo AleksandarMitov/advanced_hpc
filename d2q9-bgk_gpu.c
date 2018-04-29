@@ -925,7 +925,7 @@ float merged_timestep_ops(const t_param params, int*restrict obstacles, int flag
   for (int jj = 0; jj < params.ny; jj++)
   {
 
-    #pragma omp parallel for simd schedule(static,1)
+    #pragma omp parallel for simd
     for (int ii = start; ii < end; ii += increment)
     {
 
@@ -1244,7 +1244,7 @@ float av_velocity(const t_param params, int* obstacles, int flag,
   #pragma omp target teams distribute
   for (int jj = 0; jj < params.ny; jj++)
   {
-    #pragma omp parallel for simd schedule(static,1)
+    #pragma omp parallel for simd
     for (int ii = start; ii < end; ii += increment)
     {
       /* ignore occupied cells */
