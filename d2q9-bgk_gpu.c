@@ -284,6 +284,7 @@ int main(int argc, char* argv[])
    sbuffer_cells1[0:N],rbuffer_cells1[0:N], \
    a[0:N], b[0:N],c[0:N],d[0:N],e[0:N],f[0:N],g[0:N], \
    h[0:N],i[0:N],at[0:N],bt[0:N],ct[0:N],dt[0:N],et[0:N],ft[0:N],gt[0:N],ht[0:N],it[0:N])
+  #pragma omp target
   for (int tt = 0; tt < params.maxIters; tt++)
   {
     //output_state(file_name, tt, process_cells, process_obstacles, process_params.nx, process_params.ny);
@@ -912,7 +913,7 @@ float merged_timestep_ops(const t_param params, int*restrict obstacles, int flag
   for (int jj = 0; jj < params.ny; jj++)
   {
 
-    #pragma omp target
+    //#pragma omp target
     for (int ii = start; ii < end; ii += increment)
     {
 
