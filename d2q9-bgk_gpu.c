@@ -857,7 +857,7 @@ int accelerate_flow(const t_param params, int* obstacles, int flag, float *a,
     end = params.nx;
     increment = 1;
 
-
+#pragma omp target teams distribute parallel for simd
     for (int ii = start; ii < end; ii += increment)
     {
       /* if the cell is not occupied and
