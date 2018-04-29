@@ -66,14 +66,14 @@ float merged_timestep_ops(const t_param params, int*restrict obstacles, int flag
     /* compute average velocity */
     float av_velocity(const t_param params, int* obstacles, int flag,
         float* a,float* b,float* c,float* d,float* e,float* f,float* g,float* h,float* i);
-        void exchange_halos(int rank, int size, t_param child_params,
+        /*void exchange_halos(int rank, int size, t_param child_params,
               float* sbuffer_cells, float* rbuffer_cells,
               float* a,float* b,float* c,float* d,float* e,float* f,float* g,float* h,float* i);
               extern int MPI_Sendrecv(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
                           int dest, int sendtag,
                           void *recvbuf, int recvcount, MPI_Datatype recvtype,
                           int source, int recvtag,
-                          MPI_Comm comm, MPI_Status *status);
+                          MPI_Comm comm, MPI_Status *status); */
 
 #pragma omp end declare target
 
