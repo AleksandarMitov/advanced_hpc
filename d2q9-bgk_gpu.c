@@ -281,7 +281,7 @@ int main(int argc, char* argv[])
   int iters = child_params.maxIters;
 
 #pragma omp target enter data map(to: child_params, child_vels[0:iters], child_obstacles[0:N], \
-   sbuffer_cells1[0:N],rbuffer_cells1[0:N] \
+   sbuffer_cells1[0:N],rbuffer_cells1[0:N], \
    a[0:N], b[0:N],c[0:N],d[0:N],e[0:N],f[0:N],g[0:N], \
    h[0:N],i[0:N],at[0:N],bt[0:N],ct[0:N],dt[0:N],et[0:N],ft[0:N],gt[0:N],ht[0:N],it[0:N])
   for (int tt = 0; tt < params.maxIters; tt++)
@@ -354,7 +354,7 @@ int main(int argc, char* argv[])
     }
   }
   #pragma omp target exit data map(from: child_vels[0:iters], child_obstacles[0:N], \
-     sbuffer_cells1[0:N],rbuffer_cells1[0:N] \
+     sbuffer_cells1[0:N],rbuffer_cells1[0:N], \
      a[0:N], b[0:N],c[0:N],d[0:N],e[0:N],f[0:N],g[0:N])
 
      child_cells->speeds[0] = a;
