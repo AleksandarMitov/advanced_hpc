@@ -277,7 +277,13 @@ int main(int argc, char* argv[])
   gt = child_tmp_cells->speeds[6];
   ht = child_tmp_cells->speeds[7];
   it = child_tmp_cells->speeds[8];
+  int N = child_params.nx * child_params.ny;
+  int iters = child_params.maxIters;
 
+#pragma omp target enter data map(to: child_params, child_vels[0:iters], child_obstacles[0:N], \
+   sbuffer_cells1[0:N],rbuffer_cells1[0:N] \
+   a[0:N], b[0:N],c[0:N],d[0:N],e[0:N],f[0:N],g[0:N], \
+   h[0:N],i[0:N],at[0:N],bt[0:N],ct[0:N],dt[0:N],et[0:N],ft[0:N],gt[0:N],ht[0:N],it[0:N])
   for (int tt = 0; tt < params.maxIters; tt++)
   {
     //output_state(file_name, tt, process_cells, process_obstacles, process_params.nx, process_params.ny);
@@ -347,6 +353,19 @@ int main(int argc, char* argv[])
       printf("av velocity: %.12E\n", child_vels[tt]);
     }
   }
+  #pragma omp target exit data map(from: child_vels[0:iters], child_obstacles[0:N], \
+     sbuffer_cells1[0:N],rbuffer_cells1[0:N] \
+     a[0:N], b[0:N],c[0:N],d[0:N],e[0:N],f[0:N],g[0:N])
+
+     child_cells->speeds[0] = a;
+     child_cells->speeds[1] = b;
+     child_cells->speeds[2] = c;
+     child_cells->speeds[3] = d;
+     child_cells->speeds[4] = e;
+     child_cells->speeds[5] = f;
+     child_cells->speeds[6] = g;
+     child_cells->speeds[7] = h;
+     child_cells->speeds[8] = i;
 
   //Handle average velocity computations
   if(rank == 0) {
