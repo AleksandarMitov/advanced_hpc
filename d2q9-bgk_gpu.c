@@ -912,7 +912,7 @@ float merged_timestep_ops(const t_param params, int*restrict obstacles, int flag
   for (int jj = 0; jj < params.ny; jj++)
   {
 
-    #pragma omp target teams distribute parallel for simd
+    #pragma omp target
     for (int ii = start; ii < end; ii += increment)
     {
 
