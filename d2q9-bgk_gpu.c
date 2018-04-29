@@ -925,7 +925,7 @@ float merged_timestep_ops(const t_param params, int*restrict obstacles, int flag
   for (int jj = 0; jj < params.ny; jj++)
   {
 
-    #pragma omp parallel for simd
+    #pragma omp parallel for simd schedule(static,1)
     for (int ii = start; ii < end; ii += increment)
     {
 
