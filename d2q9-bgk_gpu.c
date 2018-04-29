@@ -1241,8 +1241,10 @@ float av_velocity(const t_param params, int* obstacles, int flag,
   tot_u = 0.f;
 
   /* loop over all non-blocked cells */
+  #pragma omp target teams distribute
   for (int jj = 0; jj < params.ny; jj++)
   {
+    #pragma omp parallel for simd schedule(static,1)
     for (int ii = start; ii < end; ii += increment)
     {
       /* ignore occupied cells */
