@@ -1204,8 +1204,8 @@ float av_velocity(const t_param params, int* obstacles, int flag, float* tot_u_b
   /* loop over all non-blocked cells */
 #pragma omp target update to(tot_u_buffer[0:1])
 {}
-#pragma omp target teams distribute parallel for simd collapse(2) \
-                                        reduction(+ : tot_u_buffer[0])
+#pragma omp target teams distribute parallel for simd collapse(2)
+                                        //reduction(+ : tot_u_buffer[0])
   for (int jj = 0; jj < ny; jj++)
   {
     //#pragma omp parallel for simd
@@ -1266,7 +1266,8 @@ float av_velocity(const t_param params, int* obstacles, int flag, float* tot_u_b
                      / local_density;
         */
         /* accumulate the norm of x- and y- velocity components */
-        tot_u_buffer[0] += sqrtf((u_x * u_x) + (u_y * u_y));
+        //tot_u_buffer[0] += sqrtf((u_x * u_x) + (u_y * u_y));
+        tot_u += sqrtf((u_x * u_x) + (u_y * u_y));
         /* increase counter of inspected cells */
         //++tot_cells;
       }
@@ -1274,7 +1275,7 @@ float av_velocity(const t_param params, int* obstacles, int flag, float* tot_u_b
   }
   #pragma omp target update from(tot_u_buffer[0:1])
   {}
-  tot_u = tot_u_buffer[0];
+  //tot_u = tot_u_buffer[0];
   //return tot_u / (float)tot_cells;
   return tot_u;
 }
