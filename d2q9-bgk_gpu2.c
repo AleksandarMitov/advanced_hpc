@@ -801,9 +801,9 @@ int timestep(const t_param params, int* obstacles, int flag,
   float *it = (*tmp_cells)->speeds[8];
   */
 
-float res = -1;
+
   accelerate_flow(params, obstacles, flag, a,b,c,d,e,f,g,h,i);
-  res = merged_timestep_ops(params, obstacles, flag,a,b,c,d,e,f,g,h,i,at,bt,ct,dt,et,ft,gt,ht,it);
+  merged_timestep_ops(params, obstacles, flag,a,b,c,d,e,f,g,h,i,at,bt,ct,dt,et,ft,gt,ht,it);
   /*
   t_speed_arrays *cells_ptr = *cells;
   *cells = *tmp_cells;
@@ -813,7 +813,7 @@ float res = -1;
   //rebound(params, cells, tmp_cells, obstacles, flag);
   //collision(params, cells, tmp_cells, obstacles, flag);
 
-return res;
+return 0;
 }
 
 /*
@@ -854,30 +854,26 @@ int accelerate_flow(const t_param params, int* obstacles, int flag, float *a,
 
   /* modify the 2nd row of the grid */
   int jj = params.ny - 2;
-
-  int start, end, increment;
-    start = 0;
-    end = params.nx;
-    increment = 1;
+  int nx = params.nx;
 
 #pragma omp target teams distribute parallel for simd
-    for (int ii = start; ii < end; ii += increment)
+    for (int ii = 0; ii < nx; ++ii)
     {
       /* if the cell is not occupied and
       ** we don't send a negative density */
-      if (!obstacles[ii + jj*params.nx]
-          && (d[ii + jj*params.nx] - w1) > 0.f
-          && (g[ii + jj*params.nx] - w2) > 0.f
-          && (h[ii + jj*params.nx] - w2) > 0.f)
+      if (!obstacles[ii + jj*nx]
+          && (d[ii + jj*nx] - w1) > 0.f
+          && (g[ii + jj*nx] - w2) > 0.f
+          && (h[ii + jj*nx] - w2) > 0.f)
       {
         /* increase 'east-side' densities */
-        b[ii + jj*params.nx] += w1;
-        f[ii + jj*params.nx] += w2;
-        i[ii + jj*params.nx] += w2;
+        b[ii + jj*nx] += w1;
+        f[ii + jj*nx] += w2;
+        i[ii + jj*nx] += w2;
         /* decrease 'west-side' densities */
-        d[ii + jj*params.nx] -= w1;
-        g[ii + jj*params.nx] -= w2;
-        h[ii + jj*params.nx] -= w2;
+        d[ii + jj*nx] -= w1;
+        g[ii + jj*nx] -= w2;
+        h[ii + jj*nx] -= w2;
       }
     }
 
@@ -910,10 +906,6 @@ float merged_timestep_ops(const t_param params, int*restrict obstacles, int flag
   */
   int N = params.nx * params.ny;
   // merge propagate, rebound, collision and av_velocity
-  int start, end, increment;
-    start = 0;
-    end = params.nx;
-    increment = 1;
 
 int nx = params.nx;
 int ny = params.ny;
@@ -923,7 +915,7 @@ float omega = params.omega;
   const float w0 = 4.f / 9.f;  /* weighting factor */
   const float w1 = 1.f / 9.f;  /* weighting factor */
   const float w2 = 1.f / 36.f; /* weighting factor */
-  float tot_u = 0.f;         /* accumulated magnitudes of velocity for each cell */
+  //float tot_u = 0.f;         /* accumulated magnitudes of velocity for each cell */
   /* loop over _all_ cells */
   //#pragma omp target enter data map(to: a[0:N], b[0:N],c[0:N],d[0:N],e[0:N],f[0:N],g[0:N], \
     //h[0:N],i[0:N],at[0:N],bt[0:N],ct[0:N],dt[0:N],et[0:N],ft[0:N],gt[0:N],ht[0:N],it[0:N])
@@ -932,7 +924,7 @@ for (int jj = 0; jj < ny; jj++)
 {
 
   ///#pragma omp parallel for simd
-  for (int ii = start; ii < end; ii += increment)
+  for (int ii = 0; ii < nx; ++ii)
   {
 
     /*
@@ -1158,7 +1150,7 @@ for (int jj = 0; jj < ny; jj++)
 }
   //#pragma omp target exit data map(from: a[0:N], b[0:N],c[0:N],d[0:N],e[0:N],f[0:N],g[0:N], \
     //h[0:N],i[0:N],at[0:N],bt[0:N],ct[0:N],dt[0:N],et[0:N],ft[0:N],gt[0:N],ht[0:N],it[0:N])
-  return tot_u;
+  return 0;
 }
 
 
