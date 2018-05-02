@@ -1266,16 +1266,16 @@ float av_velocity(const t_param params, int* obstacles, int flag, float* tot_u_b
                      / local_density;
         */
         /* accumulate the norm of x- and y- velocity components */
-        //tot_u_buffer[0] += sqrtf((u_x * u_x) + (u_y * u_y));
-        tot_u += sqrtf((u_x * u_x) + (u_y * u_y));
+        tot_u_buffer[0] += sqrtf((u_x * u_x) + (u_y * u_y));
+        //tot_u += sqrtf((u_x * u_x) + (u_y * u_y));
         /* increase counter of inspected cells */
         //++tot_cells;
       }
     }
   }
-  #pragma omp target update from(tot_u_buffer[0:1], tot_u)
+  #pragma omp target update from(tot_u_buffer[0:1])
   {}
-  //tot_u = tot_u_buffer[0];
+  tot_u = tot_u_buffer[0];
   //return tot_u / (float)tot_cells;
   return tot_u;
 }
