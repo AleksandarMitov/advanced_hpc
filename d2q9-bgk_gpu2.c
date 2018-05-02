@@ -1273,7 +1273,7 @@ float av_velocity(const t_param params, int* obstacles, int flag, float* tot_u_b
       }
     }
   }
-  #pragma omp target update from(tot_u_buffer[0:1])
+  #pragma omp target update from(tot_u_buffer[0:1], tot_u)
   {}
   //tot_u = tot_u_buffer[0];
   //return tot_u / (float)tot_cells;
