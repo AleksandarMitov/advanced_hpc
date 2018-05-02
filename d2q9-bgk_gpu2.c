@@ -369,7 +369,7 @@ int main(int argc, char* argv[])
   }
 
   #pragma omp target exit data map(from: \
-     a[0:N], b[0:N],c[0:N],d[0:N],e[0:N],f[0:N],g[0:N])
+     a[0:N], b[0:N],c[0:N],d[0:N],e[0:N],f[0:N],g[0:N], h[0:N], i[0:N])
   {}
 
      child_cells->speeds[0] = a;
