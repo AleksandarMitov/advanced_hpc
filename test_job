@@ -5,6 +5,7 @@
 #SBATCH --partition gpu_veryshort
 #SBATCH --job-name=gpujob
 #SBATCH --time=0:0:1
+#SBATCH --output test.out
 
 cd $SLURM_SUBMIT_DIR
 
