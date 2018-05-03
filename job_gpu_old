@@ -1,0 +1,18 @@
+#!/bin/bash
+
+#SBATCH --job-name d2q9-openmp_gpu
+#SBATCH -N1
+#SBATCH --gres=gpu:1
+#SBATCH --time 00:01:00
+#SBATCH --partition gpu
+#SBATCH --output d2q9-bgk_gpu_split_gpu_calls_with_halo_exchange_1node.out
+
+echo Running on host `hostname`
+echo Time is `date`
+echo Directory is `pwd`
+echo Slurm job ID is $SLURM_JOB_ID
+echo This job runs on the following machines:
+echo `echo $SLURM_JOB_NODELIST | uniq`
+
+#! Run the executable
+nvprof --print-gpu-trace ./d2q9-bgk_gpu2 ./input_1024x1024.params ./obstacles_1024x1024.dat
