@@ -1,3 +1,4 @@
+#!/bin/bash
 #SBATCH --job-name=d2q9-openmp_gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node 1
