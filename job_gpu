@@ -4,6 +4,7 @@
 #SBATCH --gres=gpu:2
 #SBATCH --partition gpu_veryshort
 #SBATCH --time 00:01:00
+#SBATCH --output d2q9-bgk_gpu_split_gpu_calls_with_halo_exchange_1node.out
 
 echo Running on host `hostname`
 echo Time is `date`
