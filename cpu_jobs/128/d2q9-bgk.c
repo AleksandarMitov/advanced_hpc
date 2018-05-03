@@ -315,7 +315,10 @@ int main(int argc, char* argv[])
     if(!ASYNC_HALOS) {
       if(rank == 0 && tt == 0) printf("Flag: 2\n");
       //Exchange halos
-      exchange_halos(rank, size, child_params, child_cells, sbuffer_cells1, rbuffer_cells1);
+      if(size > 1) {
+        exchange_halos(rank, size, child_params, child_cells, sbuffer_cells1, rbuffer_cells1);
+      }
+
       //now do computations
       //timestep(child_params, &child_cells, &child_tmp_cells, child_obstacles, 2);
       timestep_async(child_params, &child_cells, &child_tmp_cells, child_obstacles, 2, old_cell_vals, 0, 0);
@@ -890,7 +893,7 @@ int accelerate_flow(const t_param params, t_speed_arrays* cells, int* obstacles,
     increment = 1;
   }
 
-  for (int ii = start; ii < end; ii += increment)
+  for (int ii = start; ii < end; ++ii)
   {
     /* if the cell is not occupied and
     ** we don't send a negative density */
@@ -986,11 +989,9 @@ float merged_timestep_ops(const t_param params, t_speed_arrays*restrict cells, t
   /* loop over _all_ cells */
   for (int jj = 0; jj < params.ny; jj++)
   {
-    for (int ii = start; ii < end; ii += increment)
+    for (int ii = start; ii < end; ++ii)
     {
-      if(flag == 1 && ii == 2) {
-        ii = params.nx - 2;
-      }
+
 
       /*
       t_speed currentVal = cells[jj*params.nx + ii];
@@ -1362,7 +1363,7 @@ float av_velocity(const t_param params, t_speed_arrays* cells, int* obstacles, i
   /* loop over all non-blocked cells */
   for (int jj = 0; jj < params.ny; jj++)
   {
-    for (int ii = start; ii < end; ii += increment)
+    for (int ii = start; ii < end; ++ii)
     {
       /* ignore occupied cells */
       if (!obstacles[ii + jj*params.nx])
