@@ -5,7 +5,7 @@
 #SBATCH --gres=gpu:2
 #SBATCH --partition gpu_veryshort
 #SBATCH --time 00:01:00
-#SBATCH --output d2q9-bgk_gpu_split_gpu_calls_with_halo_exchange_4procs.out
+#SBATCH --output d2q9-bgk_gpu_128_256_3procs.out
 
 echo Running on host `hostname`
 echo Time is `date`
@@ -16,4 +16,4 @@ echo `echo $SLURM_JOB_NODELIST | uniq`
 
 cd $SLURM_SUBMIT_DIR
 
-mpirun -l -print-rank-map -ppn 1 -env CUDA_VISIBLE_DEVICES 0 ./d2q9-bgk_gpu2 ./input_1024x1024.params ./obstacles_1024x1024.dat : -env CUDA_VISIBLE_DEVICES 1 ./d2q9-bgk_gpu2 ./input_1024x1024.params ./obstacles_1024x1024.dat
+mpirun -l -print-rank-map -ppn 1 -env CUDA_VISIBLE_DEVICES 0 ../../../d2q9-bgk_gpu2 ../../../input_128x256.params ../../../obstacles_128x256.dat : -env CUDA_VISIBLE_DEVICES 1 ../../../d2q9-bgk_gpu2 ../../../input_128x256.params ../../../obstacles_128x256.dat

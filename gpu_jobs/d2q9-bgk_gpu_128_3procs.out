@@ -1,0 +1,14 @@
+Running on host gpu30.bc4.acrc.priv
+Time is Thu May 3 04:18:27 BST 2018
+Directory is /mnt/storage/home/am15249/advanced_hpc/gpu_jobs
+Slurm job ID is 1140257
+This job runs on the following machines:
+gpu[30-31]
+(gpu30:0,2)
+(gpu31:1,3)
+[0] [proxy:0:0@gpu30.bc4.acrc.priv] HYDU_create_process (../../utils/launch/launch.c:825): execvp error on file ../../../d2q9-bgk_gpu2 (No such file or directory)
+[2] [proxy:0:0@gpu30.bc4.acrc.priv] HYDU_create_process (../../utils/launch/launch.c:825): execvp error on file ../../../d2q9-bgk_gpu2 (No such file or directory)
+[mpiexec@gpu30.bc4.acrc.priv] control_cb (../../pm/pmiserv/pmiserv_cb.c:781): connection to proxy 1 at host gpu31 failed
+[mpiexec@gpu30.bc4.acrc.priv] HYDT_dmxu_poll_wait_for_event (../../tools/demux/demux_poll.c:76): callback returned error status
+[mpiexec@gpu30.bc4.acrc.priv] HYD_pmci_wait_for_completion (../../pm/pmiserv/pmiserv_pmci.c:501): error waiting for event
+[mpiexec@gpu30.bc4.acrc.priv] main (../../ui/mpich/mpiexec.c:1147): process manager error waiting for completion

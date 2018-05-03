@@ -1,0 +1,181 @@
+Running on host gpu30.bc4.acrc.priv
+Time is Thu May 3 04:21:10 BST 2018
+Directory is /mnt/storage/home/am15249/advanced_hpc/gpu_jobs/128/4_gpus
+Slurm job ID is 1140264
+This job runs on the following machines:
+gpu[30-31]
+(gpu30:0,2)
+(gpu31:1,3)
+[0] Number of processes: 4
+[0] iteration: 0
+[0] ==timestep: 0==
+[0] av velocity: 4.241771250963E-02
+[0] ==timestep: 500==
+[0] av velocity: 8.890054702759E+00
+[0] ==timestep: 1000==
+[0] av velocity: 9.667371749878E+00
+[0] ==timestep: 1500==
+[0] av velocity: 1.162264251709E+01
+[0] ==timestep: 2000==
+[0] av velocity: 1.185896873474E+01
+[0] ==timestep: 2500==
+[0] av velocity: 1.214274024963E+01
+[0] ==timestep: 3000==
+[0] av velocity: 1.264438152313E+01
+[0] ==timestep: 3500==
+[0] av velocity: 1.212587356567E+01
+[0] ==timestep: 4000==
+[0] av velocity: 1.270069694519E+01
+[0] ==timestep: 4500==
+[0] av velocity: 1.251085281372E+01
+[0] iteration: 5000
+[0] ==timestep: 5000==
+[0] av velocity: 1.280313396454E+01
+[0] ==timestep: 5500==
+[0] av velocity: 1.336143493652E+01
+[0] ==timestep: 6000==
+[0] av velocity: 1.334691047668E+01
+[0] ==timestep: 6500==
+[0] av velocity: 1.390439414978E+01
+[0] ==timestep: 7000==
+[0] av velocity: 1.386851501465E+01
+[0] ==timestep: 7500==
+[0] av velocity: 1.410278892517E+01
+[0] ==timestep: 8000==
+[0] av velocity: 1.447705841064E+01
+[0] ==timestep: 8500==
+[0] av velocity: 1.462070369720E+01
+[0] ==timestep: 9000==
+[0] av velocity: 1.523446273804E+01
+[0] ==timestep: 9500==
+[0] av velocity: 1.550791168213E+01
+[0] iteration: 10000
+[0] ==timestep: 10000==
+[0] av velocity: 1.593268203735E+01
+[0] ==timestep: 10500==
+[0] av velocity: 1.630381393433E+01
+[0] ==timestep: 11000==
+[0] av velocity: 1.650089073181E+01
+[0] ==timestep: 11500==
+[0] av velocity: 1.697067451477E+01
+[0] ==timestep: 12000==
+[0] av velocity: 1.725321578979E+01
+[0] ==timestep: 12500==
+[0] av velocity: 1.772372436523E+01
+[0] ==timestep: 13000==
+[0] av velocity: 1.818218231201E+01
+[0] ==timestep: 13500==
+[0] av velocity: 1.855001258850E+01
+[0] ==timestep: 14000==
+[0] av velocity: 1.901379203796E+01
+[0] ==timestep: 14500==
+[0] av velocity: 1.931270217896E+01
+[0] iteration: 15000
+[0] ==timestep: 15000==
+[0] av velocity: 1.972011947632E+01
+[0] ==timestep: 15500==
+[0] av velocity: 2.011927032471E+01
+[0] ==timestep: 16000==
+[0] av velocity: 2.051815032959E+01
+[0] ==timestep: 16500==
+[0] av velocity: 2.101189804077E+01
+[0] ==timestep: 17000==
+[0] av velocity: 2.142510986328E+01
+[0] ==timestep: 17500==
+[0] av velocity: 2.188759613037E+01
+[0] ==timestep: 18000==
+[0] av velocity: 2.230236816406E+01
+[0] ==timestep: 18500==
+[0] av velocity: 2.270831680298E+01
+[0] ==timestep: 19000==
+[0] av velocity: 2.316631507874E+01
+[0] ==timestep: 19500==
+[0] av velocity: 2.359293365479E+01
+[0] iteration: 20000
+[0] ==timestep: 20000==
+[0] av velocity: 2.407930755615E+01
+[0] ==timestep: 20500==
+[0] av velocity: 2.454542732239E+01
+[0] ==timestep: 21000==
+[0] av velocity: 2.500350952148E+01
+[0] ==timestep: 21500==
+[0] av velocity: 2.546106719971E+01
+[0] ==timestep: 22000==
+[0] av velocity: 2.588127136230E+01
+[0] ==timestep: 22500==
+[0] av velocity: 2.632699394226E+01
+[0] ==timestep: 23000==
+[0] av velocity: 2.675843048096E+01
+[0] ==timestep: 23500==
+[0] av velocity: 2.719815635681E+01
+[0] ==timestep: 24000==
+[0] av velocity: 2.764268493652E+01
+[0] ==timestep: 24500==
+[0] av velocity: 2.806258773804E+01
+[0] iteration: 25000
+[0] ==timestep: 25000==
+[0] av velocity: 2.848128509521E+01
+[0] ==timestep: 25500==
+[0] av velocity: 2.887348556519E+01
+[0] ==timestep: 26000==
+[0] av velocity: 2.926008224487E+01
+[0] ==timestep: 26500==
+[0] av velocity: 2.964450454712E+01
+[0] ==timestep: 27000==
+[0] av velocity: 3.001642608643E+01
+[0] ==timestep: 27500==
+[0] av velocity: 3.039069366455E+01
+[0] ==timestep: 28000==
+[0] av velocity: 3.074891662598E+01
+[0] ==timestep: 28500==
+[0] av velocity: 3.109466552734E+01
+[0] ==timestep: 29000==
+[0] av velocity: 3.142711067200E+01
+[0] ==timestep: 29500==
+[0] av velocity: 3.174338912964E+01
+[0] iteration: 30000
+[0] ==timestep: 30000==
+[0] av velocity: 3.205661773682E+01
+[0] ==timestep: 30500==
+[0] av velocity: 3.235694885254E+01
+[0] ==timestep: 31000==
+[0] av velocity: 3.265251159668E+01
+[0] ==timestep: 31500==
+[0] av velocity: 3.293761825562E+01
+[0] ==timestep: 32000==
+[0] av velocity: 3.320891189575E+01
+[0] ==timestep: 32500==
+[0] av velocity: 3.347083663940E+01
+[0] ==timestep: 33000==
+[0] av velocity: 3.371735382080E+01
+[0] ==timestep: 33500==
+[0] av velocity: 3.395889282227E+01
+[0] ==timestep: 34000==
+[0] av velocity: 3.419147109985E+01
+[0] ==timestep: 34500==
+[0] av velocity: 3.441539001465E+01
+[0] iteration: 35000
+[0] ==timestep: 35000==
+[0] av velocity: 3.463204193115E+01
+[0] ==timestep: 35500==
+[0] av velocity: 3.483526992798E+01
+[0] ==timestep: 36000==
+[0] av velocity: 3.503086471558E+01
+[0] ==timestep: 36500==
+[0] av velocity: 3.521643447876E+01
+[0] ==timestep: 37000==
+[0] av velocity: 3.539479064941E+01
+[0] ==timestep: 37500==
+[0] av velocity: 3.556849670410E+01
+[0] ==timestep: 38000==
+[0] av velocity: 3.573296356201E+01
+[0] ==timestep: 38500==
+[0] av velocity: 3.589110565186E+01
+[0] ==timestep: 39000==
+[0] av velocity: 3.603987121582E+01
+[0] ==timestep: 39500==
+[0] av velocity: 3.618083953857E+01
+[0] ==done==
+[0] Elapsed time:			14.683601 (s)
+[0] Elapsed user CPU time:		11.906558 (s)
+[0] Elapsed system CPU time:	6.297543 (s)

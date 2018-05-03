@@ -1,0 +1,95 @@
+Running on host gpu04.bc4.acrc.priv
+Time is Thu May 3 04:23:28 BST 2018
+Directory is /mnt/storage/home/am15249/advanced_hpc/gpu_jobs/1024/1_gpus
+Slurm job ID is 1140275
+This job runs on the following machines:
+gpu04
+Number of processes: 1
+iteration: 0
+==timestep: 0==
+av velocity: 2.830981969833E+00
+==timestep: 500==
+av velocity: 5.885894775391E+02
+==timestep: 1000==
+av velocity: 1.071251464844E+03
+==timestep: 1500==
+av velocity: 1.402544921875E+03
+==timestep: 2000==
+av velocity: 1.493464477539E+03
+==timestep: 2500==
+av velocity: 1.510893798828E+03
+==timestep: 3000==
+av velocity: 1.842230224609E+03
+==timestep: 3500==
+av velocity: 1.933188354492E+03
+==timestep: 4000==
+av velocity: 2.087829589844E+03
+==timestep: 4500==
+av velocity: 2.054179931641E+03
+iteration: 5000
+==timestep: 5000==
+av velocity: 2.202722656250E+03
+==timestep: 5500==
+av velocity: 2.339298339844E+03
+==timestep: 6000==
+av velocity: 2.413991699219E+03
+==timestep: 6500==
+av velocity: 2.572773925781E+03
+==timestep: 7000==
+av velocity: 2.585658691406E+03
+==timestep: 7500==
+av velocity: 2.679235839844E+03
+==timestep: 8000==
+av velocity: 2.723767333984E+03
+==timestep: 8500==
+av velocity: 2.940026855469E+03
+==timestep: 9000==
+av velocity: 3.027559082031E+03
+==timestep: 9500==
+av velocity: 2.987753173828E+03
+iteration: 10000
+==timestep: 10000==
+av velocity: 2.986371582031E+03
+==timestep: 10500==
+av velocity: 3.172687500000E+03
+==timestep: 11000==
+av velocity: 3.386241699219E+03
+==timestep: 11500==
+av velocity: 3.406343017578E+03
+==timestep: 12000==
+av velocity: 3.352651367188E+03
+==timestep: 12500==
+av velocity: 3.464247802734E+03
+==timestep: 13000==
+av velocity: 3.706407714844E+03
+==timestep: 13500==
+av velocity: 3.770664794922E+03
+==timestep: 14000==
+av velocity: 3.757430664062E+03
+==timestep: 14500==
+av velocity: 3.783491943359E+03
+iteration: 15000
+==timestep: 15000==
+av velocity: 3.955344726562E+03
+==timestep: 15500==
+av velocity: 4.088276855469E+03
+==timestep: 16000==
+av velocity: 4.154858398438E+03
+==timestep: 16500==
+av velocity: 4.131645019531E+03
+==timestep: 17000==
+av velocity: 4.259192382812E+03
+==timestep: 17500==
+av velocity: 4.358977050781E+03
+==timestep: 18000==
+av velocity: 4.470824218750E+03
+==timestep: 18500==
+av velocity: 4.548015136719E+03
+==timestep: 19000==
+av velocity: 4.580320312500E+03
+==timestep: 19500==
+av velocity: 4.595656250000E+03
+==done==
+Elapsed time:			16.786793 (s)
+Elapsed user CPU time:		6.154551 (s)
+Elapsed system CPU time:	3.533049 (s)

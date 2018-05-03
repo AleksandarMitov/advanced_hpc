@@ -5,7 +5,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --time 00:01:00
 #SBATCH --partition gpu
-#SBATCH --output d2q9-bgk_gpu_split_gpu_calls_with_halo_exchange_1proc_TEST.out
+#SBATCH --output d2q9-bgk_gpu_1024_1procs.out
 
 echo Running on host `hostname`
 echo Time is `date`
@@ -15,4 +15,4 @@ echo This job runs on the following machines:
 echo `echo $SLURM_JOB_NODELIST | uniq`
 
 #! Run the executable
-nvprof --print-gpu-trace ./d2q9-bgk_gpu2 ./input_128x128.params ./obstacles_128x128.dat
+mpirun ../../../d2q9-bgk_gpu2 ../../../input_1024x1024.params ../../../obstacles_1024x1024.dat
