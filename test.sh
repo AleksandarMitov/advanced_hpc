@@ -1,0 +1,3 @@
+#!/bin/bash
+h=`hostname`
+echo "HOSTNAME $h CUDA_VISIBLE_DEVICES $CUDA_VISIBLE_DEVICES"

@@ -1,0 +1,11 @@
+#!/bin/bash -login
+#SBATCH --nodes=2
+#SBATCH --ntasks-per-node 1
+#SBATCH --gres=gpu:2
+#SBATCH --partition gpu_veryshort
+#SBATCH --job-name=gpujob
+#SBATCH --time=0:0:1
+
+cd $SLURM_SUBMIT_DIR
+
+mpirun -l -print-rank-map -ppn 1 -env CUDA_VISIBLE_DEVICES 0 ./test.sh : -env CUDA_VISIBLE_DEVICES 1 ./test.sh
