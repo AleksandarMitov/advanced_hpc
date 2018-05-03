@@ -303,7 +303,7 @@ int main(int argc, char* argv[])
   for (int tt = 0; tt < params.maxIters; tt++)
   {
     //output_state(file_name, tt, process_cells, process_obstacles, process_params.nx, process_params.ny);
-    if(rank == 0 && tt % 500 == 0) printf("iteration: %d\n", tt);
+    if(rank == 0 && tt % 5000 == 0) printf("iteration: %d\n", tt);
 
       //Exchange halos
       exchange_halos(rank, size, child_params, sbuffer_cells1, rbuffer_cells1,
@@ -931,7 +931,8 @@ float merged_timestep_ops(const t_param params, int*restrict obstacles, int flag
 int nx = params.nx;
 int ny = params.ny;
 float omega = params.omega;
-
+#pragma omp target
+{
   const float c_sq = 1.f / 3.f; /* square of speed of sound */
   const float w0 = 4.f / 9.f;  /* weighting factor */
   const float w1 = 1.f / 9.f;  /* weighting factor */
@@ -1169,6 +1170,7 @@ for (int jj = 0; jj < ny; jj++)
 
   }
 }
+}
   //#pragma omp target exit data map(from: a[0:N], b[0:N],c[0:N],d[0:N],e[0:N],f[0:N],g[0:N], \
     //h[0:N],i[0:N],at[0:N],bt[0:N],ct[0:N],dt[0:N],et[0:N],ft[0:N],gt[0:N],ht[0:N],it[0:N])
   return 0;
@@ -1200,10 +1202,7 @@ float av_velocity(const t_param params, int* obstacles, int flag, float* tot_u_b
   float *i = cells->speeds[8];
   */
 
-  int start, end, increment;
-  start = 1;
-  end = params.nx-1;
-  increment = 1;
+  int end = params.nx-1;
 
   int    tot_cells = 0;  /* no. of cells used in calculation */
   float tot_u;          /* accumulated magnitudes of velocity for each cell */
@@ -1222,7 +1221,7 @@ float av_velocity(const t_param params, int* obstacles, int flag, float* tot_u_b
   for (int jj = 0; jj < ny; jj++)
   {
     //#pragma omp parallel for simd
-    for (int ii = start; ii < end; ii += increment)
+    for (int ii = 1; ii < end; ++ii)
     {
       /* ignore occupied cells */
       if (!obstacles[ii + jj*nx])
