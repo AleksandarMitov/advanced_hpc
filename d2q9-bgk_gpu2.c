@@ -15,7 +15,7 @@ const int TEST = 1;
 //const int ASYNC_HALOS = 0;
 //const int SPREAD_COLS_EVENLY = 1;
 //const int MERGE_TIMESTEP = 1;
-const int REDUCE_HALO_SPEED_ECHANGE = 1;
+const int REDUCE_HALO_SPEED_ECHANGE = 0;
 
 /* struct to hold the parameter values */
 typedef struct
@@ -101,7 +101,9 @@ void output_state(const char* output_file, int step, t_speed_arrays *cells, int 
 void test_vels(const char* output_file, float *vels, int steps);
 void exchange_obstacles(int rank, int size, t_param child_params, int *child_obstacles,
                       int* sbuffer_obstacles, int* rbuffer_obstacles);
-
+void exchange_halos(int rank, int size, t_param child_params,
+            float* sbuffer_cells, float* rbuffer_cells,
+          float* a,float* b,float* c,float* d,float* e,float* f,float* g,float* h,float* i);
 void exchange_halos_async(MPI_Request** requests, int rank, int size, t_param child_params, t_speed_arrays *child_cells,
                       float* sbuffer_cells1, float* rbuffer_cells1,
                       float* sbuffer_cells2, float* rbuffer_cells2);
@@ -292,7 +294,7 @@ int main(int argc, char* argv[])
   int iters = child_params.maxIters;
   float *tot_u_buffer = (float*) malloc(sizeof(float));
 #pragma omp target enter data map(to:  child_obstacles[0:N], \
-   tot_u_buffer[0:1], \
+   tot_u_buffer[0:1], sbuffer_cells1[0:params.ny*NSPEEDS], rbuffer_cells1[0:params.ny*NSPEEDS], \
    a[0:N], b[0:N],c[0:N],d[0:N],e[0:N],f[0:N],g[0:N], \
    h[0:N],i[0:N],at[0:N],bt[0:N],ct[0:N],dt[0:N],et[0:N],ft[0:N],gt[0:N],ht[0:N],it[0:N])
 {}
@@ -303,11 +305,9 @@ int main(int argc, char* argv[])
     //output_state(file_name, tt, process_cells, process_obstacles, process_params.nx, process_params.ny);
     if(rank == 0 && tt % 500 == 0) printf("iteration: %d\n", tt);
 
-
-      if(rank == 0 && tt == 0) printf("Flag: 2\n");
       //Exchange halos
-      //exchange_halos(rank, size, child_params, sbuffer_cells1, rbuffer_cells1,
-      //                                                        a,b,c,d,e,f,g,h,i);
+      exchange_halos(rank, size, child_params, sbuffer_cells1, rbuffer_cells1,
+                                                              a,b,c,d,e,f,g,h,i);
       //now do computations
       //timestep(child_params, &child_cells, &child_tmp_cells, child_obstacles, 2);
       timestep(child_params, child_obstacles, 2,
@@ -591,97 +591,118 @@ void free_t_speed_arrays(t_speed_arrays* obj) {
 void exchange_halos(int rank, int size, t_param child_params,
                       float* sbuffer_cells, float* rbuffer_cells,
     float* a,float* b,float* c,float* d,float* e,float* f,float* g,float* h,float* i) {
-/*
-  float *a = child_cells->speeds[0];
-  float *b = child_cells->speeds[1];
-  float *c = child_cells->speeds[2];
-  float *d = child_cells->speeds[3];
-  float *e = child_cells->speeds[4];
-  float *f = child_cells->speeds[5];
-  float *g = child_cells->speeds[6];
-  float *h = child_cells->speeds[7];
-  float *i = child_cells->speeds[8];
-  */
 
   int left = (rank == 0) ? (rank + size - 1) : (rank - 1); // left is bottom, right is top equiv
   int right = (rank + 1) % size;
+  int speeds_to_send = REDUCE_HALO_SPEED_ECHANGE ? 3 : NSPEEDS;
+  int ny = child_params.ny;
+  int nx = child_params.nx;
   //send to the left, receive from right
   //fill with left col
-  for(int row = 0; row < child_params.ny; ++row) {
-    sbuffer_cells[row*NSPEEDS + 0] = a[row*child_params.nx + 1];
-    sbuffer_cells[row*NSPEEDS + 1] = b[row*child_params.nx + 1];
-    sbuffer_cells[row*NSPEEDS + 2] = c[row*child_params.nx + 1];
-    sbuffer_cells[row*NSPEEDS + 3] = d[row*child_params.nx + 1];
-    sbuffer_cells[row*NSPEEDS + 4] = e[row*child_params.nx + 1];
-    sbuffer_cells[row*NSPEEDS + 5] = f[row*child_params.nx + 1];
-    sbuffer_cells[row*NSPEEDS + 6] = g[row*child_params.nx + 1];
-    sbuffer_cells[row*NSPEEDS + 7] = h[row*child_params.nx + 1];
-    sbuffer_cells[row*NSPEEDS + 8] = i[row*child_params.nx + 1];
-    /*
-    for(int speed = 0; speed < NSPEEDS; ++speed) {
-      sbuffer_cells[row*NSPEEDS + speed] = child_cells->speeds[speed][row*child_params.nx + 1];
-    }*/
+  if(REDUCE_HALO_SPEED_ECHANGE) {
+    #pragma omp target teams distribute parallel for simd
+    for(int row = 0; row < ny; ++row) {
+      sbuffer_cells[row*speeds_to_send + 0] = d[row*nx + 1];
+      sbuffer_cells[row*speeds_to_send + 1] = g[row*nx + 1];
+      sbuffer_cells[row*speeds_to_send + 2] = h[row*nx + 1];
+    }
+  } else {
+    #pragma omp target teams distribute parallel for simd
+    for(int row = 0; row < ny; ++row) {
+      sbuffer_cells[row*speeds_to_send + 0] = a[row*nx + 1];
+      sbuffer_cells[row*speeds_to_send + 1] = b[row*nx + 1];
+      sbuffer_cells[row*speeds_to_send + 2] = c[row*nx + 1];
+      sbuffer_cells[row*speeds_to_send + 3] = d[row*nx + 1];
+      sbuffer_cells[row*speeds_to_send + 4] = e[row*nx + 1];
+      sbuffer_cells[row*speeds_to_send + 5] = f[row*nx + 1];
+      sbuffer_cells[row*speeds_to_send + 6] = g[row*nx + 1];
+      sbuffer_cells[row*speeds_to_send + 7] = h[row*nx + 1];
+      sbuffer_cells[row*speeds_to_send + 8] = i[row*nx + 1];
+    }
   }
+  #pragma omp target update from(sbuffer_cells[0:ny*speeds_to_send])
+  {}
 
-  MPI_Sendrecv(sbuffer_cells, child_params.ny*NSPEEDS, MPI_FLOAT, left, 0, rbuffer_cells,
-              child_params.ny*NSPEEDS, MPI_FLOAT, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+  MPI_Sendrecv(sbuffer_cells, child_params.ny*speeds_to_send, MPI_FLOAT, left, 0, rbuffer_cells,
+              child_params.ny*speeds_to_send, MPI_FLOAT, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
   //populate right col
-  for(int row = 0; row < child_params.ny; ++row) {
-    //t_speed speeds;
-    a[row*child_params.nx + (child_params.nx - 1)] = rbuffer_cells[row*NSPEEDS + 0];
-    b[row*child_params.nx + (child_params.nx - 1)] = rbuffer_cells[row*NSPEEDS + 1];
-    c[row*child_params.nx + (child_params.nx - 1)] = rbuffer_cells[row*NSPEEDS + 2];
-    d[row*child_params.nx + (child_params.nx - 1)] = rbuffer_cells[row*NSPEEDS + 3];
-    e[row*child_params.nx + (child_params.nx - 1)] = rbuffer_cells[row*NSPEEDS + 4];
-    f[row*child_params.nx + (child_params.nx - 1)] = rbuffer_cells[row*NSPEEDS + 5];
-    g[row*child_params.nx + (child_params.nx - 1)] = rbuffer_cells[row*NSPEEDS + 6];
-    h[row*child_params.nx + (child_params.nx - 1)] = rbuffer_cells[row*NSPEEDS + 7];
-    i[row*child_params.nx + (child_params.nx - 1)] = rbuffer_cells[row*NSPEEDS + 8];
-    /*
-    for(int speed = 0; speed < NSPEEDS; ++speed) {
-      child_cells->speeds[speed][row*child_params.nx + (child_params.nx - 1)] = rbuffer_cells[row*NSPEEDS + speed];
-      //speeds.speeds[speed] = rbuffer_cells[row*NSPEEDS + speed];
-    }*/
-
+  #pragma omp target update to(rbuffer_cells[0:ny*speeds_to_send])
+  {}
+  if(REDUCE_HALO_SPEED_ECHANGE) {
+    #pragma omp target teams distribute parallel for simd
+    for(int row = 0; row < ny; ++row) {
+      d[row*nx + (nx - 1)] = rbuffer_cells[row*speeds_to_send + 0];
+      g[row*nx + (nx - 1)] = rbuffer_cells[row*speeds_to_send + 1];
+      h[row*nx + (nx - 1)] = rbuffer_cells[row*speeds_to_send + 2];
+    }
+  } else {
+    #pragma omp target teams distribute parallel for simd
+    for(int row = 0; row < ny; ++row) {
+      //t_speed speeds;
+      a[row*nx + (child_params.nx - 1)] = rbuffer_cells[row*speeds_to_send + 0];
+      b[row*nx + (child_params.nx - 1)] = rbuffer_cells[row*speeds_to_send + 1];
+      c[row*nx + (child_params.nx - 1)] = rbuffer_cells[row*speeds_to_send + 2];
+      d[row*nx + (child_params.nx - 1)] = rbuffer_cells[row*speeds_to_send + 3];
+      e[row*nx + (child_params.nx - 1)] = rbuffer_cells[row*speeds_to_send + 4];
+      f[row*nx + (child_params.nx - 1)] = rbuffer_cells[row*speeds_to_send + 5];
+      g[row*nx + (child_params.nx - 1)] = rbuffer_cells[row*speeds_to_send + 6];
+      h[row*nx + (child_params.nx - 1)] = rbuffer_cells[row*speeds_to_send + 7];
+      i[row*nx + (child_params.nx - 1)] = rbuffer_cells[row*speeds_to_send + 8];
+    }
   }
+
+
   //send to right, receive from left
   //fill with right col
-  for(int row = 0; row < child_params.ny; ++row) {
-    sbuffer_cells[row*NSPEEDS + 0] = a[row*child_params.nx + (child_params.nx - 2)];
-    sbuffer_cells[row*NSPEEDS + 1] = b[row*child_params.nx + (child_params.nx - 2)];
-    sbuffer_cells[row*NSPEEDS + 2] = c[row*child_params.nx + (child_params.nx - 2)];
-    sbuffer_cells[row*NSPEEDS + 3] = d[row*child_params.nx + (child_params.nx - 2)];
-    sbuffer_cells[row*NSPEEDS + 4] = e[row*child_params.nx + (child_params.nx - 2)];
-    sbuffer_cells[row*NSPEEDS + 5] = f[row*child_params.nx + (child_params.nx - 2)];
-    sbuffer_cells[row*NSPEEDS + 6] = g[row*child_params.nx + (child_params.nx - 2)];
-    sbuffer_cells[row*NSPEEDS + 7] = h[row*child_params.nx + (child_params.nx - 2)];
-    sbuffer_cells[row*NSPEEDS + 8] = i[row*child_params.nx + (child_params.nx - 2)];
-
-    /*
-    for(int speed = 0; speed < NSPEEDS; ++speed) {
-      sbuffer_cells[row*NSPEEDS + speed] = child_cells->speeds[speed][row*child_params.nx + (child_params.nx - 2)];
-    }*/
-  }
-  MPI_Sendrecv(sbuffer_cells, child_params.ny*NSPEEDS, MPI_FLOAT, right, 0, rbuffer_cells,
-              child_params.ny*NSPEEDS, MPI_FLOAT, left, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-  //populate left col
-  for(int row = 0; row < child_params.ny; ++row) {
-    //t_speed speeds;
-    a[row*child_params.nx] = rbuffer_cells[row*NSPEEDS + 0];
-    b[row*child_params.nx] = rbuffer_cells[row*NSPEEDS + 1];
-    c[row*child_params.nx] = rbuffer_cells[row*NSPEEDS + 2];
-    d[row*child_params.nx] = rbuffer_cells[row*NSPEEDS + 3];
-    e[row*child_params.nx] = rbuffer_cells[row*NSPEEDS + 4];
-    f[row*child_params.nx] = rbuffer_cells[row*NSPEEDS + 5];
-    g[row*child_params.nx] = rbuffer_cells[row*NSPEEDS + 6];
-    h[row*child_params.nx] = rbuffer_cells[row*NSPEEDS + 7];
-    i[row*child_params.nx] = rbuffer_cells[row*NSPEEDS + 8];
-    /*
-    for(int speed = 0; speed < NSPEEDS; ++speed) {
-      //speeds.speeds[speed] = rbuffer_cells[row*NSPEEDS + speed];
-      child_cells->speeds[speed][row*child_params.nx] = rbuffer_cells[row*NSPEEDS + speed];
+  if(REDUCE_HALO_SPEED_ECHANGE) {
+    #pragma omp target teams distribute parallel for simd
+    for(int row = 0; row < ny; ++row) {
+      sbuffer_cells[row*speeds_to_send + 0] = b[row*nx + (nx - 2)];
+      sbuffer_cells[row*speeds_to_send + 1] = f[row*nx + (nx - 2)];
+      sbuffer_cells[row*speeds_to_send + 2] = i[row*nx + (nx - 2)];
     }
-    */
+  } else {
+    #pragma omp target teams distribute parallel for simd
+    for(int row = 0; row < ny; ++row) {
+      sbuffer_cells[row*speeds_to_send + 0] = a[row*nx + (nx - 2)];
+      sbuffer_cells[row*speeds_to_send + 1] = b[row*nx + (nx - 2)];
+      sbuffer_cells[row*speeds_to_send + 2] = c[row*nx + (nx - 2)];
+      sbuffer_cells[row*speeds_to_send + 3] = d[row*nx + (nx - 2)];
+      sbuffer_cells[row*speeds_to_send + 4] = e[row*nx + (nx - 2)];
+      sbuffer_cells[row*speeds_to_send + 5] = f[row*nx + (nx - 2)];
+      sbuffer_cells[row*speeds_to_send + 6] = g[row*nx + (nx - 2)];
+      sbuffer_cells[row*speeds_to_send + 7] = h[row*nx + (nx - 2)];
+      sbuffer_cells[row*speeds_to_send + 8] = i[row*nx + (nx - 2)];
+    }
+  }
+  #pragma omp target update from(sbuffer_cells[0:ny*speeds_to_send])
+  {}
+
+  MPI_Sendrecv(sbuffer_cells, child_params.ny*speeds_to_send, MPI_FLOAT, right, 0, rbuffer_cells,
+              child_params.ny*speeds_to_send, MPI_FLOAT, left, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+  //populate left col
+  #pragma omp target update to(rbuffer_cells[0:ny*speeds_to_send])
+  {}
+  if(REDUCE_HALO_SPEED_ECHANGE) {
+    #pragma omp target teams distribute parallel for simd
+    for(int row = 0; row < ny; ++row) {
+      b[row*nx] = rbuffer_cells[row*speeds_to_send + 0];
+      f[row*nx] = rbuffer_cells[row*speeds_to_send + 1];
+      i[row*nx] = rbuffer_cells[row*speeds_to_send + 2];
+    }
+  } else {
+    #pragma omp target teams distribute parallel for simd
+    for(int row = 0; row < ny; ++row) {
+      a[row*nx] = rbuffer_cells[row*speeds_to_send + 0];
+      b[row*nx] = rbuffer_cells[row*speeds_to_send + 1];
+      c[row*nx] = rbuffer_cells[row*speeds_to_send + 2];
+      d[row*nx] = rbuffer_cells[row*speeds_to_send + 3];
+      e[row*nx] = rbuffer_cells[row*speeds_to_send + 4];
+      f[row*nx] = rbuffer_cells[row*speeds_to_send + 5];
+      g[row*nx] = rbuffer_cells[row*speeds_to_send + 6];
+      h[row*nx] = rbuffer_cells[row*speeds_to_send + 7];
+      i[row*nx] = rbuffer_cells[row*speeds_to_send + 8];
+    }
   }
 }
 
