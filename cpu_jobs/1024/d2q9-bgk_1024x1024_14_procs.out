@@ -1,0 +1,153 @@
+Running on host compute087.bc4.acrc.priv
+Time is Thu May 3 21:22:36 BST 2018
+Directory is /mnt/storage/home/am15249/advanced_hpc/cpu_jobs/1024
+Slurm job ID is 1149979
+This job runs on the following machines:
+compute087
+Number of processes: 14
+Spreading remainder cols evenly.
+Merging propagate, rebound, collision and av_velocity.
+Using reduced halo exchange.
+iteration: 0
+Flag: 2
+==timestep: 0==
+av velocity: 2.015029788017E-01
+==timestep: 1==
+av velocity: 3.553495407104E-01
+==timestep: 2==
+av velocity: 4.932476282120E-01
+==timestep: 3==
+av velocity: 6.458419561386E-01
+==timestep: 4==
+av velocity: 8.130404353142E-01
+==timestep: 5==
+av velocity: 9.593710899353E-01
+==timestep: 6==
+av velocity: 1.097426533699E+00
+==timestep: 7==
+av velocity: 1.221666812897E+00
+==timestep: 8==
+av velocity: 1.332787394524E+00
+==timestep: 9==
+av velocity: 1.455520033836E+00
+==timestep: 10==
+av velocity: 1.566558837891E+00
+==timestep: 11==
+av velocity: 1.690897226334E+00
+==timestep: 12==
+av velocity: 1.826521039009E+00
+==timestep: 13==
+av velocity: 1.925753235817E+00
+==timestep: 14==
+av velocity: 2.005170345306E+00
+==timestep: 15==
+av velocity: 2.100787878036E+00
+==timestep: 16==
+av velocity: 2.208836078644E+00
+==timestep: 17==
+av velocity: 2.330153465271E+00
+==timestep: 18==
+av velocity: 2.444304466248E+00
+==timestep: 19==
+av velocity: 2.541287422180E+00
+iteration: 500
+==timestep: 500==
+av velocity: 5.260461807251E+01
+iteration: 1000
+==timestep: 1000==
+av velocity: 6.512983703613E+01
+iteration: 1500
+==timestep: 1500==
+av velocity: 7.913655853271E+01
+iteration: 2000
+==timestep: 2000==
+av velocity: 8.235921478271E+01
+iteration: 2500
+==timestep: 2500==
+av velocity: 8.418026733398E+01
+iteration: 3000
+==timestep: 3000==
+av velocity: 9.030755615234E+01
+iteration: 3500
+==timestep: 3500==
+av velocity: 8.583802795410E+01
+iteration: 4000
+==timestep: 4000==
+av velocity: 8.904682922363E+01
+iteration: 4500
+==timestep: 4500==
+av velocity: 8.903083038330E+01
+iteration: 5000
+==timestep: 5000==
+av velocity: 8.484425354004E+01
+iteration: 5500
+==timestep: 5500==
+av velocity: 9.319394683838E+01
+iteration: 6000
+==timestep: 6000==
+av velocity: 8.369242858887E+01
+iteration: 6500
+==timestep: 6500==
+av velocity: 9.776092529297E+01
+iteration: 7000
+==timestep: 7000==
+av velocity: 8.617129516602E+01
+iteration: 7500
+==timestep: 7500==
+av velocity: 9.855903625488E+01
+iteration: 8000
+==timestep: 8000==
+av velocity: 9.210361480713E+01
+iteration: 8500
+==timestep: 8500==
+av velocity: 1.012750320435E+02
+iteration: 9000
+==timestep: 9000==
+av velocity: 9.688270568848E+01
+iteration: 9500
+==timestep: 9500==
+av velocity: 1.023341217041E+02
+iteration: 10000
+==timestep: 10000==
+av velocity: 9.815639495850E+01
+iteration: 10500
+==timestep: 10500==
+av velocity: 1.038792800903E+02
+iteration: 11000
+==timestep: 11000==
+av velocity: 1.033070220947E+02
+iteration: 11500
+==timestep: 11500==
+av velocity: 1.095068130493E+02
+iteration: 12000
+==timestep: 12000==
+av velocity: 1.109971160889E+02
+iteration: 12500
+==timestep: 12500==
+av velocity: 1.128203964233E+02
+iteration: 13000
+==timestep: 13000==
+av velocity: 1.131849975586E+02
+iteration: 13500
+==timestep: 13500==
+av velocity: 1.133932876587E+02
+iteration: 14000
+==timestep: 14000==
+av velocity: 1.173420257568E+02
+iteration: 14500
+==timestep: 14500==
+av velocity: 1.185045700073E+02
+iteration: 15000
+==timestep: 15000==
+av velocity: 1.174537582397E+02
+iteration: 15500
+==timestep: 15500==
+av velocity: 1.235932312012E+02
+iteration: 16000
+==timestep: 16000==
+av velocity: 1.209240188599E+02
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+slurmstepd: error: *** STEP 1149979.0 ON compute087 CANCELLED AT 2018-05-03T21:24:48 DUE TO TIME LIMIT ***
+slurmstepd: error: *** JOB 1149979 ON compute087 CANCELLED AT 2018-05-03T21:24:48 DUE TO TIME LIMIT ***
+srun: got SIGCONT
+srun: forcing job termination

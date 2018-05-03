@@ -1,0 +1,293 @@
+Running on host compute167.bc4.acrc.priv
+Time is Thu May 3 21:48:51 BST 2018
+Directory is /mnt/storage/home/am15249/advanced_hpc/cpu_jobs/128
+Slurm job ID is 1149960
+This job runs on the following machines:
+compute[167,346,523]
+Number of processes: 84
+Spreading remainder cols evenly.
+Merging propagate, rebound, collision and av_velocity.
+Using reduced halo exchange.
+iteration: 0
+Flag: 2
+==timestep: 0==
+av velocity: 7.523486856371E-04
+==timestep: 1==
+av velocity: 9.312403853983E-04
+==timestep: 2==
+av velocity: 1.880393130705E-03
+==timestep: 3==
+av velocity: 2.352928975597E-03
+==timestep: 4==
+av velocity: 2.521408954635E-03
+==timestep: 5==
+av velocity: 2.862142398953E-03
+==timestep: 6==
+av velocity: 3.331265877932E-03
+==timestep: 7==
+av velocity: 4.083515144885E-03
+==timestep: 8==
+av velocity: 5.562108475715E-03
+==timestep: 9==
+av velocity: 6.570331286639E-03
+==timestep: 10==
+av velocity: 7.051424123347E-03
+==timestep: 11==
+av velocity: 7.130602374673E-03
+==timestep: 12==
+av velocity: 7.546060252935E-03
+==timestep: 13==
+av velocity: 8.808468468487E-03
+==timestep: 14==
+av velocity: 1.006366685033E-02
+==timestep: 15==
+av velocity: 1.082025654614E-02
+==timestep: 16==
+av velocity: 1.125041209161E-02
+==timestep: 17==
+av velocity: 1.173070073128E-02
+==timestep: 18==
+av velocity: 1.222339551896E-02
+==timestep: 19==
+av velocity: 1.281181629747E-02
+iteration: 500
+==timestep: 500==
+av velocity: 7.274501770735E-02
+iteration: 1000
+==timestep: 1000==
+av velocity: 4.715721309185E-02
+iteration: 1500
+==timestep: 1500==
+av velocity: 6.081392988563E-02
+iteration: 2000
+==timestep: 2000==
+av velocity: 5.517816543579E-02
+iteration: 2500
+==timestep: 2500==
+av velocity: 5.193221569061E-02
+iteration: 3000
+==timestep: 3000==
+av velocity: 6.059973314404E-02
+iteration: 3500
+==timestep: 3500==
+av velocity: 5.098311230540E-02
+iteration: 4000
+==timestep: 4000==
+av velocity: 5.687032267451E-02
+iteration: 4500
+==timestep: 4500==
+av velocity: 5.301225557923E-02
+iteration: 5000
+==timestep: 5000==
+av velocity: 5.137468874454E-02
+iteration: 5500
+==timestep: 5500==
+av velocity: 5.728989839554E-02
+iteration: 6000
+==timestep: 6000==
+av velocity: 5.092355981469E-02
+iteration: 6500
+==timestep: 6500==
+av velocity: 5.690943077207E-02
+iteration: 7000
+==timestep: 7000==
+av velocity: 5.465722456574E-02
+iteration: 7500
+==timestep: 7500==
+av velocity: 5.470447987318E-02
+iteration: 8000
+==timestep: 8000==
+av velocity: 5.818204209208E-02
+iteration: 8500
+==timestep: 8500==
+av velocity: 5.496420338750E-02
+iteration: 9000
+==timestep: 9000==
+av velocity: 5.879683420062E-02
+iteration: 9500
+==timestep: 9500==
+av velocity: 5.786964669824E-02
+iteration: 10000
+==timestep: 10000==
+av velocity: 5.818059667945E-02
+iteration: 10500
+==timestep: 10500==
+av velocity: 6.073888391256E-02
+iteration: 11000
+==timestep: 11000==
+av velocity: 5.879960581660E-02
+iteration: 11500
+==timestep: 11500==
+av velocity: 6.187080591917E-02
+iteration: 12000
+==timestep: 12000==
+av velocity: 6.094720959663E-02
+iteration: 12500
+==timestep: 12500==
+av velocity: 6.186670064926E-02
+iteration: 13000
+==timestep: 13000==
+av velocity: 6.318175792694E-02
+iteration: 13500
+==timestep: 13500==
+av velocity: 6.255298852921E-02
+iteration: 14000
+==timestep: 14000==
+av velocity: 6.447173655033E-02
+iteration: 14500
+==timestep: 14500==
+av velocity: 6.426297873259E-02
+iteration: 15000
+==timestep: 15000==
+av velocity: 6.505503505468E-02
+iteration: 15500
+==timestep: 15500==
+av velocity: 6.606771796942E-02
+iteration: 16000
+==timestep: 16000==
+av velocity: 6.574413180351E-02
+iteration: 16500
+==timestep: 16500==
+av velocity: 6.710188835859E-02
+iteration: 17000
+==timestep: 17000==
+av velocity: 6.699792295694E-02
+iteration: 17500
+==timestep: 17500==
+av velocity: 6.775144487619E-02
+iteration: 18000
+==timestep: 18000==
+av velocity: 6.849309802055E-02
+iteration: 18500
+==timestep: 18500==
+av velocity: 6.854585558176E-02
+iteration: 19000
+==timestep: 19000==
+av velocity: 6.963223218918E-02
+iteration: 19500
+==timestep: 19500==
+av velocity: 6.960627436638E-02
+iteration: 20000
+==timestep: 20000==
+av velocity: 7.027857750654E-02
+iteration: 20500
+==timestep: 20500==
+av velocity: 7.071136683226E-02
+iteration: 21000
+==timestep: 21000==
+av velocity: 7.100700587034E-02
+iteration: 21500
+==timestep: 21500==
+av velocity: 7.181271910667E-02
+iteration: 22000
+==timestep: 22000==
+av velocity: 7.208801060915E-02
+iteration: 22500
+==timestep: 22500==
+av velocity: 7.279372960329E-02
+iteration: 23000
+==timestep: 23000==
+av velocity: 7.327140122652E-02
+iteration: 23500
+==timestep: 23500==
+av velocity: 7.362169027328E-02
+iteration: 24000
+==timestep: 24000==
+av velocity: 7.426055520773E-02
+iteration: 24500
+==timestep: 24500==
+av velocity: 7.457660883665E-02
+iteration: 25000
+==timestep: 25000==
+av velocity: 7.526007294655E-02
+iteration: 25500
+==timestep: 25500==
+av velocity: 7.580017298460E-02
+iteration: 26000
+==timestep: 26000==
+av velocity: 7.633604854345E-02
+iteration: 26500
+==timestep: 26500==
+av velocity: 7.698068022728E-02
+iteration: 27000
+==timestep: 27000==
+av velocity: 7.737292349339E-02
+iteration: 27500
+==timestep: 27500==
+av velocity: 7.792181521654E-02
+iteration: 28000
+==timestep: 28000==
+av velocity: 7.838419079781E-02
+iteration: 28500
+==timestep: 28500==
+av velocity: 7.888126373291E-02
+iteration: 29000
+==timestep: 29000==
+av velocity: 7.948077470064E-02
+iteration: 29500
+==timestep: 29500==
+av velocity: 7.997313886881E-02
+iteration: 30000
+==timestep: 30000==
+av velocity: 8.055797964334E-02
+iteration: 30500
+==timestep: 30500==
+av velocity: 8.100029826164E-02
+iteration: 31000
+==timestep: 31000==
+av velocity: 8.143816888332E-02
+iteration: 31500
+==timestep: 31500==
+av velocity: 8.186975866556E-02
+iteration: 32000
+==timestep: 32000==
+av velocity: 8.226997405291E-02
+iteration: 32500
+==timestep: 32500==
+av velocity: 8.275556564331E-02
+iteration: 33000
+==timestep: 33000==
+av velocity: 8.320155739784E-02
+iteration: 33500
+==timestep: 33500==
+av velocity: 8.366933465004E-02
+iteration: 34000
+==timestep: 34000==
+av velocity: 8.408954739571E-02
+iteration: 34500
+==timestep: 34500==
+av velocity: 8.443399518728E-02
+iteration: 35000
+==timestep: 35000==
+av velocity: 8.478119969368E-02
+iteration: 35500
+==timestep: 35500==
+av velocity: 8.508946746588E-02
+iteration: 36000
+==timestep: 36000==
+av velocity: 8.544562011957E-02
+iteration: 36500
+==timestep: 36500==
+av velocity: 8.581991493702E-02
+iteration: 37000
+==timestep: 37000==
+av velocity: 8.618091791868E-02
+iteration: 37500
+==timestep: 37500==
+av velocity: 8.653123676777E-02
+iteration: 38000
+==timestep: 38000==
+av velocity: 8.681289106607E-02
+iteration: 38500
+==timestep: 38500==
+av velocity: 8.706270158291E-02
+iteration: 39000
+==timestep: 39000==
+av velocity: 8.730448037386E-02
+iteration: 39500
+==timestep: 39500==
+av velocity: 8.756119012833E-02
+==done==
+Elapsed time:			1.746244 (s)
+Elapsed user CPU time:		1.770495 (s)
+Elapsed system CPU time:	0.066243 (s)

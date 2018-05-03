@@ -1,9 +1,9 @@
-Running on host gpu04.bc4.acrc.priv
-Time is Thu May 3 04:19:40 BST 2018
+Running on host gpu23.bc4.acrc.priv
+Time is Thu May 3 17:09:35 BST 2018
 Directory is /mnt/storage/home/am15249/advanced_hpc/gpu_jobs/128/1_gpus
-Slurm job ID is 1140260
+Slurm job ID is 1147044
 This job runs on the following machines:
-gpu04
+gpu23
 Number of processes: 1
 iteration: 0
 ==timestep: 0==
@@ -174,6 +174,6 @@ av velocity: 2.085732421875E+02
 ==timestep: 39500==
 av velocity: 2.089102020264E+02
 ==done==
-Elapsed time:			12.912123 (s)
-Elapsed user CPU time:		10.170681 (s)
-Elapsed system CPU time:	5.513941 (s)
+Elapsed time:			12.870503 (s)
+Elapsed user CPU time:		10.282074 (s)
+Elapsed system CPU time:	5.626408 (s)
