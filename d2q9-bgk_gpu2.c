@@ -931,8 +931,7 @@ float merged_timestep_ops(const t_param params, int*restrict obstacles, int flag
 int nx = params.nx;
 int ny = params.ny;
 float omega = params.omega;
-#pragma omp target
-{
+
   const float c_sq = 1.f / 3.f; /* square of speed of sound */
   const float w0 = 4.f / 9.f;  /* weighting factor */
   const float w1 = 1.f / 9.f;  /* weighting factor */
@@ -1170,7 +1169,7 @@ for (int jj = 0; jj < ny; jj++)
 
   }
 }
-}
+
   //#pragma omp target exit data map(from: a[0:N], b[0:N],c[0:N],d[0:N],e[0:N],f[0:N],g[0:N], \
     //h[0:N],i[0:N],at[0:N],bt[0:N],ct[0:N],dt[0:N],et[0:N],ft[0:N],gt[0:N],ht[0:N],it[0:N])
   return 0;
